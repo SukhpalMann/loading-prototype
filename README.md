@@ -84,10 +84,11 @@ The comparison is in [`checks/one-link.ts`](src/second-attempt/checks/one-link.t
 | `src/second-attempt/engine.ts`            | Lane sorting, guardrails, the simulated week, results with ranges, and message templates |
 | `src/second-attempt/screens/`             | The four screens                                                                         |
 | `src/second-attempt/ui.tsx`, `styles.css` | Shared components and plain CSS scoped under `.sa`                                       |
-| `src/second-attempt/checks/`              | The comparison with one link, and tests that pin every quoted number to the code         |
+| `src/second-attempt/checks/`              | The comparison with one link, and tests that pin the quoted numbers to the code          |
 | `src/second-attempt/checks/replies/`      | A small blind test of the one job proposed for a model: reading customers' replies       |
 | `src/routes/index.tsx`                    | Mounts the prototype at `/`                                                              |
 | `public/fonts/`                           | Self-hosted Anek Latin and Mukta                                                         |
+| `video/`                                  | The script that recorded the video, and the narration cues                               |
 
 ## Run it locally
 

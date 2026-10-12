@@ -1,0 +1,130 @@
+[
+  {
+    "n": 1,
+    "from": 0.4,
+    "to": 5.5,
+    "scene": "The problem",
+    "screen": "The headline, then the 68 squares",
+    "say": "Last week, sixty-eight customers pressed Pay at this store, and the payment failed."
+  },
+  {
+    "n": 2,
+    "from": 5.7,
+    "to": 8.7,
+    "scene": "The problem",
+    "screen": "\"One payment link for all 68\"",
+    "say": "The simplest recovery sends everyone the same link."
+  },
+  {
+    "n": 3,
+    "from": 8.8,
+    "to": 15.5,
+    "scene": "The problem",
+    "screen": "Zoom on the 30 red squares",
+    "say": "For thirty, it is the wrong step: the bank is still down, or the money has already gone."
+  },
+  {
+    "n": 4,
+    "from": 16.0,
+    "to": 23.7,
+    "scene": "The idea",
+    "screen": "One payment's record opens: why this lane, error fields, downtime, status",
+    "say": "Second Attempt reads why each payment failed: the error code, Razorpay's downtime feed, and what happened next."
+  },
+  {
+    "n": 5,
+    "from": 24.0,
+    "to": 30.5,
+    "scene": "The idea",
+    "screen": "The squares fly into lanes, then a pan across the lanes",
+    "say": "Then it sorts: retry now, wait for the bank, do not ask again, or another way to pay."
+  },
+  {
+    "n": 6,
+    "from": 30.8,
+    "to": 37.5,
+    "scene": "The merchant decides",
+    "screen": "The plan: a rule and its message, the holdout and cap, Approve",
+    "say": "The merchant reviews every rule and message, sets a holdout and a discount cap, and approves once."
+  },
+  {
+    "n": 7,
+    "from": 37.8,
+    "to": 40.0,
+    "scene": "The merchant decides",
+    "screen": "The red Stop all sending button",
+    "say": "One button stops everything."
+  },
+  {
+    "n": 8,
+    "from": 41.6,
+    "to": 47.2,
+    "scene": "A week, live",
+    "screen": "The week plays. Zoya's reply, then \"Link switched off\"",
+    "say": "A customer replies that her money was already cut, so the link is switched off."
+  },
+  {
+    "n": 9,
+    "from": 47.3,
+    "to": 51.2,
+    "scene": "A week, live",
+    "screen": "The reply test opens: 17 of 30 against 30 of 30",
+    "say": "Reading such replies is the one job I'd give a model."
+  },
+  {
+    "n": 10,
+    "from": 51.3,
+    "to": 59.3,
+    "scene": "A week, live",
+    "screen": "The rows: Missed in red, Caught beside it",
+    "say": "On thirty replies I wrote, a keyword rule missed five of fifteen debit reports. The model missed none."
+  },
+  {
+    "n": 11,
+    "from": 59.5,
+    "to": 62.9,
+    "scene": "A week, live",
+    "screen": "Thursday 9:24 PM: 4 held until a bank is back",
+    "say": "And messages wait while a bank is down."
+  },
+  {
+    "n": 12,
+    "from": 63.4,
+    "to": 66.3,
+    "scene": "What it achieved",
+    "screen": "Week 1 says too early. Click 12 weeks",
+    "say": "Results are read once, against a holdout."
+  },
+  {
+    "n": 13,
+    "from": 66.5,
+    "to": 71.3,
+    "scene": "What it achieved",
+    "screen": "\"After 12 weeks, ₹1.21 lakh came back\", then the two bars",
+    "say": "Simulated over twelve weeks, messages bring back about one point two lakh rupees."
+  },
+  {
+    "n": 14,
+    "from": 71.5,
+    "to": 78.8,
+    "scene": "What it achieved",
+    "screen": "The card \"Against one link for everyone\": 82 and 13",
+    "say": "Against one link for all, the lanes add about fifteen thousand, and cut badly timed links from eighty-two to thirteen."
+  },
+  {
+    "n": 15,
+    "from": 79.1,
+    "to": 82.7,
+    "scene": "How it learns",
+    "screen": "The card \"What changes next week\"",
+    "say": "Each week it proposes changes. None applies without her."
+  },
+  {
+    "n": 16,
+    "from": 82.9,
+    "to": 86.7,
+    "scene": "How it learns",
+    "screen": "End card with the link and your name",
+    "say": "All of this is synthetic. Next: one real merchant's data."
+  }
+]
