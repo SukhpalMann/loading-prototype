@@ -174,6 +174,25 @@ export function Plan({
               </span>
             </div>
           </section>
+
+          {/* A second way to approve, where the list of lanes ends. Hidden on narrow screens,
+              where the rules panel and its own button come next. */}
+          <div className="sa-actions sa-plan__end">
+            {approved ? (
+              <button type="button" className="sa-btn" onClick={onNext}>
+                Watch the week
+              </button>
+            ) : (
+              <button type="button" className="sa-btn" onClick={onApprove}>
+                Approve and start
+              </button>
+            )}
+            <span className="sa-note">
+              {approved
+                ? "Approved. The lanes that are on now run on their own."
+                : "Your limits are in the panel at the top right. Nothing is sent until you approve."}
+            </span>
+          </div>
         </div>
 
         <aside className="sa-guard">

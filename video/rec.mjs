@@ -3,10 +3,15 @@
 // Nothing here runs in real time. The page's JavaScript clock is paused and stepped by one
 // frame at a time, every CSS and Web Animations animation is paused and seeked to the same
 // virtual time, and each frame is captured through the DevTools protocol at the camera's crop.
-// So the result is the same on every run, and scene lengths can be changed to fit a voice-over.
+// So the result is the same on every run, and the timing can be changed to fit a voice-over.
 //
 //   node rec.mjs <base url> <out.mp4> [timings.json]
 //   DRAFT=1 for a fast low-resolution pass.
+//
+// Without a timings file the storyboard plays at its nominal pace and writes <out>.marks.json,
+// which records when each anchor was reached. A timings file gives each anchor a target time,
+// taken from where the narrator starts each line. The waits between two anchors are then
+// stretched or squeezed so the picture reaches the next anchor on time.
 //
 // It is not part of the app. It needs Playwright, sharp and ffmpeg, which are not in this
 // project's package.json.
@@ -26,6 +31,21 @@ const VH = 720;
 const OW = DRAFT ? 960 : 1920;
 const OH = DRAFT ? 540 : 1080;
 const ONLY = process.env.ONLY ? process.env.ONLY.split(",") : null; // record only these scenes
+const CAPTURE = !process.env.NOREC; // NOREC=1 walks the storyboard without capturing, to time it
+// Captions: the narration, line by line. CAPS=0 leaves them out.
+const CUES =
+  process.env.CAPS === "0"
+    ? []
+    : JSON.parse(fs.readFileSync(new URL("./cues.json", import.meta.url), "utf8"));
+const CAPTIONS = CUES.map((c, i) => ({
+  text: c.caption ?? c.say,
+  from: TIMINGS.lines?.[i] ?? c.from,
+  to: (TIMINGS.line_ends?.[i] ?? c.to) + 0.3,
+}));
+CAPTIONS.forEach((c, i) => {
+  const next = CAPTIONS[i + 1];
+  if (next) c.to = Math.min(c.to, next.from - 0.1);
+});
 
 // ---------- browser ----------
 const browser = await chromium.launch();
@@ -64,6 +84,8 @@ await page.evaluate(() => {
       #__rec .bar .ch.on { color: #fff; font-weight: 600; }
       #__rec .bar .ch.on b { background: #fff; color: #0a1322; }
       #__rec .bar .wm { color: #8fa0b8; }
+      #__rec .cap { position: fixed; left: 0; top: 0; box-sizing: content-box; transform-origin: 0 0; opacity: 0; max-width: 1010px; text-align: center; text-wrap: balance;
+        background: rgba(8, 15, 28, 0.92); color: #fff; font-size: 23px; line-height: 1.3; font-weight: 600; padding: 7px 20px 10px; border-radius: 11px; box-shadow: 0 8px 24px rgba(8, 15, 28, 0.3); }
       #__rec .ring { position: fixed; left: 0; top: 0; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 999px; border: 2.5px solid rgba(79, 125, 249, 0.95); background: rgba(79, 125, 249, 0.2); opacity: 0; }
       #__rec .cur { position: fixed; left: 0; top: 0; width: 24px; height: 24px; transform-origin: 3px 2px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35)); }
       #__rec .end { position: fixed; inset: 0; background: #0f1b2d; color: #fff; display: grid; place-items: center; text-align: center; opacity: 0; }
@@ -77,6 +99,7 @@ await page.evaluate(() => {
     </style>
     <div class="hl"></div>
     <div class="bar"><div class="chs"></div><div class="wm">Concept prototype. Synthetic data, simulated outcomes.</div></div>
+    <div class="cap"></div>
     <div class="ring"></div>
     <svg class="cur" viewBox="0 0 24 24"><path d="M4 2 L4 19.5 L8.6 15.4 L11.7 22 L14.6 20.7 L11.6 14.3 L17.8 14.3 Z" fill="#0b1220" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>
     <div class="end"><div>
@@ -129,6 +152,27 @@ await page.evaluate(() => {
     }
     bar.style.opacity = String(s.bar.o);
     bar.style.transform = `translate(${s.clip.x}px, ${s.clip.y + (720 - 30) / z}px) scale(${1 / z})`;
+    const cap = q(".cap");
+    if (cap.dataset.t !== s.cap.text) {
+      // Size the box to the widest line, so it hugs text that wraps onto two balanced lines.
+      cap.dataset.t = s.cap.text;
+      cap.style.transform = "none";
+      cap.style.width = "";
+      cap.textContent = s.cap.text;
+      if (s.cap.text) {
+        const range = document.createRange();
+        range.selectNodeContents(cap);
+        let widest = 0;
+        for (const r of range.getClientRects()) widest = Math.max(widest, r.width);
+        cap.style.width = Math.ceil(widest) + 2 + "px";
+      }
+    }
+    cap.style.opacity = String(s.cap.o);
+    if (s.cap.o > 0) {
+      const cw = cap.offsetWidth;
+      const ch = cap.offsetHeight;
+      cap.style.transform = `translate(${s.clip.x + (640 - cw / 2) / z}px, ${s.clip.y + (720 - 30 - 16 - ch) / z}px) scale(${1 / z})`;
+    }
     const hl = q(".hl");
     hl.style.opacity = String(s.hl.o);
     hl.style.transform = `translate(${s.hl.x}px, ${s.hl.y}px)`;
@@ -235,7 +279,7 @@ function startEncoder() {
     ff.on("close", (code) => (code === 0 ? res() : rej(new Error("ffmpeg exit " + code)))),
   );
 }
-startEncoder();
+if (CAPTURE) startEncoder();
 
 let lastMouse = { x: -1, y: -1 };
 async function frame() {
@@ -256,19 +300,31 @@ async function frame() {
     else r = { x: ring.x, y: ring.y, s: 0.35 + 0.95 * easeOut(p), o: 1 - p * p };
   }
   const hlNow = { ...hl, y: hl.docY === null ? hl.y : hl.docY - scr.y };
+  let capNow = { text: "", o: 0 };
+  for (const c of CAPTIONS) {
+    if (T >= c.from - 0.05 && T < c.to) {
+      const fade = 0.14;
+      capNow = {
+        text: c.text,
+        o: Math.max(0, Math.min(1, (T - (c.from - 0.05)) / fade, (c.to - T) / fade)),
+      };
+      break;
+    }
+  }
   await page.evaluate((s) => window.__recFrame(s), {
     vt: Math.round((next * 1000) / FPS),
     scrollY: scr.y,
     inner,
     clip,
     bar: { o: bar.o, on: bar.on, chapters: CHAPTERS, key: String(bar.on) },
+    cap: capNow,
     hl: hlNow,
     ring: r,
     cur,
     end: end.o,
   });
   frameIdx = next;
-  if (!recording) return;
+  if (!recording || !CAPTURE) return;
   const scale = (OW / VW) * clip.z;
   const { data } = await cdp.send("Page.captureScreenshot", {
     format: "png",
@@ -283,9 +339,17 @@ async function frame() {
     .toBuffer();
   if (!ff.stdin.write(raw)) await new Promise((res) => ff.stdin.once("drain", res));
 }
-const wait = async (sec) => {
+// Time spent since the last anchor: `fixed` cannot be stretched (pointer travel, clicks, camera
+// moves), `scaled` can (holds).
+let accFixed = 0;
+let accScaled = 0;
+const waitRaw = async (sec) => {
   const n = Math.max(0, Math.round(sec * FPS));
   for (let i = 0; i < n; i++) await frame();
+  return n / FPS;
+};
+const wait = async (sec) => {
+  accFixed += await waitRaw(sec);
 };
 
 // ---------- helpers for the storyboard ----------
@@ -393,30 +457,60 @@ async function press(sel, opts = {}) {
   lastMouse = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
 }
 
-// ---------- scenes ----------
-// Each scene has a nominal length. A timings file can stretch or squeeze any scene to fit the
-// voice-over: every wait inside the scene is multiplied by the same factor.
+// ---------- scenes, anchors and pace ----------
 const NOMINAL = { problem: 15.6, idea: 15.0, plan: 9.5, live: 22.9, results: 15.9, close: 8.0 };
-let k = 1;
-const w = (sec) => wait(sec * k);
+const REF = TIMINGS.ref ?? null; // anchors of the nominal run: [{ name, at, fixed, scaled }], and the tail
+const TARGET = TIMINGS.anchors ?? null; // anchor name -> the time it should be reached
+let k = 1; // how much the holds are stretched in the current stretch of the storyboard
+const w = async (sec) => {
+  accScaled += sec;
+  await waitRaw(sec * k);
+};
+async function anchor(name) {
+  if (TARGET && TARGET[name] !== undefined) {
+    const target = TARGET[name];
+    if (T < target - 0.5 / FPS) await waitRaw(target - T);
+    else if (T > target + 0.12) console.log(`  late at ${name} by ${(T - target).toFixed(2)}s`);
+  }
+  if (recording)
+    marks.push({
+      anchor: name,
+      at: +T.toFixed(3),
+      fixed: +accFixed.toFixed(3),
+      scaled: +accScaled.toFixed(3),
+    });
+  accFixed = 0;
+  accScaled = 0;
+  k = 1;
+  if (TARGET && REF) {
+    const i = REF.anchors.findIndex((x) => x.name === name);
+    const next = REF.anchors[i + 1] ?? null;
+    const nextTarget = next ? TARGET[next.name] : TIMINGS.end;
+    const seg = next ?? REF.tail;
+    if (nextTarget !== undefined && seg && seg.scaled > 0) {
+      k = Math.min(6, Math.max(0.12, (nextTarget - T - seg.fixed) / seg.scaled));
+    }
+  }
+}
 async function scene(name, fn) {
   if (ONLY && !ONLY.includes(name)) {
     recording = false;
     k = 0.05; // rush through skipped scenes so the page still reaches the right state
   } else {
     recording = true;
-    k = (TIMINGS[name] ?? NOMINAL[name]) / NOMINAL[name];
   }
+  await anchor(name);
   const t0 = T;
-  marks.push({ scene: name, at: recording ? +T.toFixed(2) : null });
+  if (recording) marks.push({ scene: name, at: +T.toFixed(2) });
   await fn();
   if (recording) {
-    const want = TIMINGS[name] ?? NOMINAL[name];
-    const left = want - (T - t0);
-    if (left > 0.02) await wait(left);
-    console.log(
-      `${name}: ${(T - t0).toFixed(2)}s (target ${want}s${left < -0.05 ? ", OVER by " + (-left).toFixed(2) : ""})`,
-    );
+    if (!TARGET) {
+      const left = NOMINAL[name] - (T - t0);
+      if (left > 0.02) await w(left);
+      if (left < -0.05)
+        console.log(`  ${name} runs ${(-left).toFixed(2)}s over its nominal length`);
+    }
+    console.log(`${name}: ${(T - t0).toFixed(2)}s`);
   }
 }
 const cue = (label) => recording && marks.push({ cue: label, at: +T.toFixed(2) });
@@ -443,6 +537,7 @@ await scene("problem", async () => {
   // A slow push in on the headline, so the first seconds are not a still.
   tween(cam, { cx: 610, cy: 340, z: 1.06 }, 3.0 * k, (p) => p);
   await w(3.0);
+  await anchor("p_slab");
   cue("the same link for everyone");
   const slab = await bring(".sa-slab", {}, { top: 84, dur: 1.2, hold: false });
   camTo({ x: slab.x, y: slab.y - 8, w: slab.w, h: slab.h + 8 }, { pad: 26, maxZ: 1.2, dur: 1.5 });
@@ -450,6 +545,7 @@ await scene("problem", async () => {
   const say = await rect(".sa-slab__big");
   await moveTo({ x: say.x - 34, y: say.y + 30, w: 10, h: 10 }, { dur: 0.9 });
   await w(3.0);
+  await anchor("p_tokens");
   cue("thirty are wrong");
   const tokens = await rect(".sa-slab__tokens");
   const sub = await rect(".sa-slab__sub");
@@ -489,6 +585,7 @@ await scene("idea", async () => {
   await click();
   inner = null;
   await w(0.25);
+  await anchor("i_sort");
   await clickOn(".sa-seg--yard button", { text: "Second Attempt: four lanes" }, { dur: 0.7 });
   cue("then it sorts: the squares fly into lanes");
   await w(1.5);
@@ -537,6 +634,7 @@ await scene("plan", async () => {
   await moveTo(approve, { dur: 0.8 });
   await click();
   await w(0.6);
+  await anchor("pl_stop");
   await clickOn(".sa-guard .sa-btn", { text: "Watch the week" }, { dur: 0.45 });
   stopScroll();
   cut();
@@ -559,6 +657,7 @@ await scene("live", async () => {
   // Hold time once the customer's reply has been handled.
   for (let i = 0; i < 12 * FPS; i++) {
     await frame();
+    accFixed += 1 / FPS;
     if (await exists(".sa-ev", { text: "Link switched off" })) break;
   }
   await click();
@@ -574,6 +673,7 @@ await scene("live", async () => {
   await w(1.1);
   tween(cam, { cy: cam.cy + 150 }, 0.9);
   await w(1.3);
+  await anchor("l_feed");
   cue("the link is switched off");
   spotOff(0.3);
   const ev = await rect(".sa-ev", { nth: 0 });
@@ -597,6 +697,7 @@ await scene("live", async () => {
   await w(1.5);
   await moveTo({ x: scores.x + scores.w / 2 + 200, y: scores.y + 52, w: 10, h: 10 }, { dur: 0.6 });
   await w(0.9);
+  await anchor("l_rows");
   cue("five of fifteen missed, the model none");
   const table = await rect(".sa-rt__table");
   tween(inner, { y: table.y - box.y - 92 }, 0.9);
@@ -606,6 +707,7 @@ await scene("live", async () => {
   tween(inner, { y: table.y - box.y - 92 + 190 }, 2.2 * k);
   await w(2.4);
   // Close it and jump to the bank downtime.
+  await anchor("l_down");
   camFull(0.5);
   await moveTo({ x: 80, y: 372, w: 10, h: 10 }, { dur: 0.5 });
   await click();
@@ -649,6 +751,7 @@ await scene("results", async () => {
   tween(cam, { cx: leftX, cy: h1.y + 120, z: zr }, 0.9);
   await moveTo({ x: h1.x + 6, y: h1.y + 118, w: 10, h: 10 }, { dur: 0.9 });
   await w(1.7);
+  await anchor("r_verdict");
   cue("about 1.2 lakh against no message");
   await bring(".sa-verdict", {}, { top: 330, dur: 1.0, hold: false });
   tween(cam, { cy: 300 }, 1.0);
@@ -656,6 +759,7 @@ await scene("results", async () => {
   const verdict = await rect(".sa-verdict");
   await moveTo({ x: verdict.x + 30, y: verdict.y + verdict.h - 14, w: 10, h: 10 }, { dur: 0.7 });
   await w(2.0);
+  await anchor("r_card");
   cue("against one link: 14,633 more, and 82 down to 13");
   const sel = ".sa-res > div:last-child .sa-card";
   const card = await bring(sel, { nth: 0 }, { top: 70, dur: 0.9, hold: false });
@@ -681,6 +785,7 @@ await scene("close", async () => {
   tween(cam, { cx: VW - VW / zl / 2, cy: learn.y + 150, z: zl }, 0.9);
   await moveTo({ x: learn.x - 12, y: learn.y + 14, w: 10, h: 10 }, { dur: 0.9 });
   await w(2.5);
+  await anchor("c_end");
   cue("end card");
   tween(end, { o: 1 }, 0.6);
   tween(bar, { o: 0 }, 0.3);
@@ -689,12 +794,29 @@ await scene("close", async () => {
   await w(4.0);
 });
 
-ff.stdin.end();
-await ffDone;
+if (TARGET && TIMINGS.end !== undefined && T < TIMINGS.end - 0.5 / FPS)
+  await waitRaw(TIMINGS.end - T);
+const tail = { fixed: +accFixed.toFixed(3), scaled: +accScaled.toFixed(3) };
+if (CAPTURE) {
+  ff.stdin.end();
+  await ffDone;
+}
 const total = +(frameIdx / FPS).toFixed(2);
 fs.writeFileSync(
   OUT.replace(/\.mp4$/, ".marks.json"),
-  JSON.stringify({ fps: FPS, total, marks }, null, 1),
+  JSON.stringify(
+    {
+      fps: FPS,
+      total,
+      anchors: marks
+        .filter((m) => m.anchor)
+        .map((m) => ({ name: m.anchor, at: m.at, fixed: m.fixed, scaled: m.scaled })),
+      tail,
+      marks,
+    },
+    null,
+    1,
+  ),
 );
 console.log("total seconds:", total, "frames:", frameIdx);
 console.log("page errors:", errors.length, errors.slice(0, 5));

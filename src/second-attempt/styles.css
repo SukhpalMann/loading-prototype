@@ -2037,6 +2037,9 @@ button.sa-token:focus-visible {
   .sa-guard {
     position: static;
   }
+  .sa-plan__end {
+    display: none;
+  }
   .sa-rule__grid {
     grid-template-columns: minmax(0, 1fr);
   }
