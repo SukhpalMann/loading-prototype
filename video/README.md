@@ -5,6 +5,7 @@ The 90-second video is a screen recording of the prototype. It was not captured 
 - [`rec.mjs`](rec.mjs) is the recorder and the storyboard.
 - [`cues.json`](cues.json) is the narration, line by line, with the caption shown for each line.
 - [`fit.py`](fit.py) and [`align_ps.py`](align_ps.py) fit the picture to a voice recording, and [`finish.sh`](finish.sh) runs the whole last step.
+- [`serve.mjs`](serve.mjs) serves the production build locally. [`ref.marks.json`](ref.marks.json) and [`expected.json`](expected.json) are the storyboard's nominal timing and a reference reading's line lengths, both used by `fit.py`.
 
 ## Why a script
 
@@ -34,7 +35,8 @@ The storyboard has sixteen anchors, one for each line of the narration. An ancho
 ## Running it
 
 ```sh
-npm run build                      # then serve the production build on a local port
+npm run build
+node video/serve.mjs .output 4214 &   # serves the production build
 node video/rec.mjs http://127.0.0.1:4214/ out.mp4
 DRAFT=1 node video/rec.mjs http://127.0.0.1:4214/ draft.mp4   # a fast pass at low resolution
 CAPS=0 node video/rec.mjs http://127.0.0.1:4214/ out.mp4      # without captions

@@ -35,6 +35,7 @@ ANCHOR_LINE = {
     "close": 15, "c_end": 16,
 }
 SR = 48000
+HERE = os.path.dirname(os.path.abspath(__file__))
 PRE = 0.12  # keep up to this much before a line's first sound
 POST = 0.18  # and up to this much after its last
 
@@ -168,9 +169,9 @@ def room_tone(x, segs, length):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("audio")
-    ap.add_argument("--ref", default="ref.marks.json")
-    ap.add_argument("--cues", default="cues.json")
-    ap.add_argument("--expected", default="fit/tts/durs.json", help="spoken length of each line in a reference reading")
+    ap.add_argument("--ref", default=os.path.join(HERE, "ref.marks.json"), help="anchors of the nominal run, from NOREC=1 rec.mjs")
+    ap.add_argument("--cues", default=os.path.join(HERE, "cues.json"))
+    ap.add_argument("--expected", default=os.path.join(HERE, "expected.json"), help="spoken length of each line in a reference reading")
     ap.add_argument("--out", default="fit/run")
     ap.add_argument("--gap", type=float, default=0.34, help="shortest pause between two lines, seconds")
     ap.add_argument("--tail", type=float, default=1.3, help="seconds of picture after the last word")
