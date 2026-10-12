@@ -47,6 +47,14 @@
   font-display: swap;
   src: url("/fonts/mukta-700.woff2") format("woff2");
 }
+/* Devanagari, for the customer replies in the reply test. Loaded only when such text is shown. */
+@font-face {
+  font-family: "Mukta";
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/mukta-devanagari-400.woff2") format("woff2");
+  unicode-range: U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+A8E0-A8FF;
+}
 
 .sa {
   --ink: #0f1b2d;
@@ -1859,6 +1867,147 @@ button.sa-token:focus-visible {
   padding-left: 20px;
   margin-top: 4px;
 }
+.sa-modal__box a {
+  color: var(--hold-ink);
+  text-underline-offset: 3px;
+}
+
+/* A text button that reads as a link, for opening a panel from inside a sentence. */
+.sa-linkbtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--hold-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sa-linkbtn:hover {
+  color: var(--ink);
+}
+
+/* ---------- the reply test ---------- */
+.sa-modal__box--wide {
+  max-width: 940px;
+}
+.sa-rt__scores {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 18px 0 10px;
+}
+.sa-rt__score {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sa-rt__who {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sa-rt__big {
+  font-size: 17px;
+  color: var(--ink-2);
+}
+.sa-rt__big .sa-num {
+  font-size: 30px;
+  line-height: 1.1;
+  color: var(--ink);
+  font-stretch: 88%;
+}
+.sa-rt__sub {
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.sa-rt__sub .is-bad {
+  color: var(--stop-ink);
+}
+.sa-rt__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 18px;
+}
+.sa-rt__scroll {
+  overflow-x: auto;
+}
+.sa-rt__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 15px;
+}
+.sa-rt__table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ink-3);
+  font-size: 13px;
+  padding: 7px 16px 7px 0;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.sa-rt__table td {
+  padding: 10px 16px 11px 0;
+  border-bottom: 1px solid var(--line-2);
+  vertical-align: top;
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+.sa-rt__table th:last-child,
+.sa-rt__table td:last-child {
+  padding-right: 0;
+}
+.sa-rt__table td:first-child {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.sa-rt__table td:nth-child(2) {
+  white-space: normal;
+  width: 100%;
+}
+.sa-rt__text {
+  display: block;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.4;
+}
+.sa-rt__reading {
+  display: block;
+  color: var(--ink-3);
+  font-size: 13.5px;
+  margin-top: 2px;
+}
+.sa-rt__mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 2px 10px 3px 7px;
+  border-radius: 999px;
+}
+.sa-rt__mark--missed {
+  background: var(--stop);
+  color: #fff;
+}
+.sa-rt__mark--alarm {
+  background: var(--stop-tint);
+  color: var(--stop-ink);
+}
+.sa-rt__mark--ok {
+  color: var(--ink-3);
+  font-weight: 500;
+  padding-left: 0;
+}
 
 @media (max-width: 1100px) {
   .sa-lanes {
@@ -1969,6 +2118,18 @@ button.sa-token:focus-visible {
   .sa-table th,
   .sa-table td {
     padding-left: 8px;
+  }
+  .sa-modal {
+    padding: 10px;
+  }
+  .sa-modal__box {
+    padding: 20px 18px 24px;
+  }
+  .sa-rt__scores {
+    grid-template-columns: 1fr;
+  }
+  .sa-rt__table {
+    min-width: 520px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

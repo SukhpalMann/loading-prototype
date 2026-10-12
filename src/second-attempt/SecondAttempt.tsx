@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
-import { MERCHANT, generateWeek } from "./data";
+import { MERCHANT, generateWeek, inr } from "./data";
 import type { FailedPayment, Week } from "./data";
-import { ASSUMPTIONS, DEFAULT_CONFIG, runWeek } from "./engine";
+import { ASSUMPTIONS, DEFAULT_CONFIG, TEST_HOLDOUT_TARGET, runWeek } from "./engine";
 import type { Config } from "./engine";
 import { Inspector } from "./ui";
+import { oneLinkAgainstLanes } from "./checks/one-link";
+import { MODEL_SCORE, RULE_SCORE } from "./checks/replies/score";
 import { Brief } from "./screens/Brief";
 import { Plan } from "./screens/Plan";
 import { Live } from "./screens/Live";
 import { Results } from "./screens/Results";
+import { ReplyTest } from "./screens/ReplyTest";
 
 type Step = "brief" | "plan" | "live" | "results";
 const STEPS: { id: Step; label: string }[] = [
@@ -28,6 +31,7 @@ export default function SecondAttempt() {
   const [clock, setClock] = useState(thisWeek.start);
   const [inspect, setInspect] = useState<{ p: FailedPayment; week: Week } | null>(null);
   const [about, setAbout] = useState(false);
+  const [replyTest, setReplyTest] = useState(false);
 
   const run = useMemo(
     () => runWeek(thisWeek, cfg, { pausedAt, offersApprovedAt }),
@@ -80,6 +84,7 @@ export default function SecondAttempt() {
           <Brief
             week={lastWeek}
             onInspect={(p) => setInspect({ p, week: lastWeek })}
+            onReplyTest={() => setReplyTest(true)}
             onNext={() => go("plan")}
           />
         ) : null}
@@ -114,6 +119,7 @@ export default function SecondAttempt() {
               setCfg({ ...cfg, offersApproved: true });
             }}
             onInspect={(p) => setInspect({ p, week: thisWeek })}
+            onReplyTest={() => setReplyTest(true)}
             onGoPlan={() => go("plan")}
             onNext={() => go("results")}
           />
@@ -134,6 +140,9 @@ export default function SecondAttempt() {
         <button type="button" onClick={() => setAbout(true)}>
           Assumptions and what is simulated
         </button>
+        <button type="button" onClick={() => setReplyTest(true)}>
+          The reply test
+        </button>
       </footer>
 
       {inspect ? (
@@ -144,14 +153,24 @@ export default function SecondAttempt() {
           onClose={() => setInspect(null)}
         />
       ) : null}
-      {about ? <About onClose={() => setAbout(false)} /> : null}
+      {about ? (
+        <About
+          onClose={() => setAbout(false)}
+          onReplyTest={() => {
+            setAbout(false);
+            setReplyTest(true);
+          }}
+        />
+      ) : null}
+      {replyTest ? <ReplyTest onClose={() => setReplyTest(false)} /> : null}
     </div>
   );
 }
 
-function About({ onClose }: { onClose: () => void }) {
+function About({ onClose, onReplyTest }: { onClose: () => void; onReplyTest: () => void }) {
   const A = ASSUMPTIONS;
   const pct = (x: number) => `${Math.round(x * 100)}%`;
+  const edge = useMemo(() => oneLinkAgainstLanes(12), []);
   return (
     <div className="sa-modal" role="dialog" aria-label="Assumptions" onClick={onClose}>
       <div className="sa-modal__box" onClick={(e) => e.stopPropagation()}>
@@ -177,6 +196,21 @@ function About({ onClose }: { onClose: () => void }) {
           structured facts to the rules. Verified payment status and rules would still decide every
           action, and the model would have to beat a rules-and-keywords baseline before it shipped.
           The reply exchange on the live screen is scripted.
+        </p>
+        <p>
+          <b>One part of that has been tested.</b> I wrote {RULE_SCORE.total} customer replies by
+          hand, {RULE_SCORE.moneyMoved} of which say that money left the account or the order is
+          paid. A keyword rule, fixed before the replies existed, got {RULE_SCORE.correct} right: it
+          caught {RULE_SCORE.caught}, missed {RULE_SCORE.missed.length} and raised{" "}
+          {RULE_SCORE.falseAlarms.length} false alarms. A model got {MODEL_SCORE.correct} right.
+          Both sets of answers were committed before the answer key was opened. The model's answers
+          came from Claude in the build session, working from a fixed prompt, not from a call made
+          by this prototype. The set is small and was built to include hard cases, so it shows that
+          a gap exists, not how large it is.{" "}
+          <button type="button" className="sa-linkbtn" onClick={onReplyTest}>
+            See all {RULE_SCORE.total} replies
+          </button>
+          .
         </p>
         <p>
           <b>Outcomes are simulated</b> from these assumed rates. None of them is measured, and
@@ -223,12 +257,32 @@ function About({ onClose }: { onClose: () => void }) {
           result.
         </p>
         <p>
-          <b>How the result is measured, and its limits.</b> Every customer stays in the group they
-          were assigned to. Revenue caused is the gap in payment rates times the average payment,
-          which is an approximation. A production test would compare money collected per customer,
-          fix its length in advance and pool many merchants. Whether a pending debit can be seen
-          when a payment is sorted is not verified: I found no such field in Razorpay's public
-          payment record.
+          <b>How the result is measured, and its limits.</b> Money collected per customer, with
+          every customer kept in the group they were assigned to and non-payers counted as zero. The
+          range is a Welch interval on the difference between the two groups. The test length is
+          fixed in advance at {TEST_HOLDOUT_TARGET} held-out customers and the result is read once,
+          at the end. On the default plan the range is above zero in week 8 and back across it in
+          week 10, which is why it is not read early.
+        </p>
+        <p>
+          <b>Where the lanes' edge over one link comes from.</b> Over 12 weeks the lanes bring back{" "}
+          {inr(edge.extraValue)} more than one link for everyone. {inr(edge.edgeByLane.wait_retry)}{" "}
+          of that comes from waiting out bank downtimes. The synthetic data puts 16% of failed
+          payments inside a downtime. NPCI's chief put UPI technical declines at 0.7 to 0.8% of all
+          transactions in 2024, so on an ordinary day the share is probably lower, and the edge with
+          it: about {inr(edge.edgeIfDowntimeShareIs(0.05))} if downtimes account for 5% of failures.
+          Telling the two rules apart needs about{" "}
+          {(Math.round(edge.groupSizeNeeded / 100) * 100).toLocaleString("en-IN")} customers in each
+          group. One store of this size has about {Math.round(edge.lanes.messaged / 100) * 100} in a
+          quarter, so that test has to be pooled across merchants.
+        </p>
+        <p>
+          <b>A debit with no order.</b> RBI's 2019 rule on failed transactions requires
+          auto-reversal within five days when a UPI payment to a merchant is debited but not
+          confirmed. The status message cites that rule for UPI payments only. Whether a pending
+          debit can be seen when a payment is sorted is not verified: I found no such field in
+          Razorpay's public payment record. In the simulation every customer whose debit could not
+          be seen replies to the message. Real customers may not.
         </p>
         <p>
           <b>Not built.</b> No message is sent, no payment link is real, and there is no login.

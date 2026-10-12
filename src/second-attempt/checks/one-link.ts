@@ -20,10 +20,13 @@ import { ASSUMPTIONS, DEFAULT_CONFIG, results, runWeek, triage } from "../engine
 type Rates = Partial<Record<Cause, number>>;
 const rate = (table: Rates, cause: Cause): number | undefined => table[cause];
 
+type RecoveryLane = "retry_now" | "wait_retry" | "needs_reason";
+
 export interface OneLinkTally {
   messaged: number;
   paid: number;
   value: number;
+  valueByLane: Record<RecoveryLane, number>; // by the lane Second Attempt would have used
   intoDowntime: number;
   pendingAsked: number;
   alreadyPaid: number;
@@ -36,6 +39,7 @@ export function oneLinkWeek(week: Week, holdoutPct: number): OneLinkTally {
     messaged: 0,
     paid: 0,
     value: 0,
+    valueByLane: { retry_now: 0, wait_retry: 0, needs_reason: 0 },
     intoDowntime: 0,
     pendingAsked: 0,
     alreadyPaid: 0,
@@ -59,9 +63,10 @@ export function oneLinkWeek(week: Week, holdoutPct: number): OneLinkTally {
 
     const cause = p.truth.cause;
     const unprompted = rate(A.organicReturn, cause) ?? 0;
+    const sorted = triage(p, week);
     let chance: number;
     if (cause === "bank_down") {
-      const downtime = triage(p, week).downtime;
+      const downtime = sorted.downtime;
       const stillDown = downtime !== null && p.failedAt + 30 * MIN < downtime.end;
       if (stillDown) out.intoDowntime++;
       chance = stillDown ? unprompted : A.waitRetry.bank_down;
@@ -72,9 +77,22 @@ export function oneLinkWeek(week: Week, holdoutPct: number): OneLinkTally {
     if (p.truth.u < chance) {
       out.paid++;
       out.value += p.amount;
+      if (
+        sorted.lane === "retry_now" ||
+        sorted.lane === "wait_retry" ||
+        sorted.lane === "needs_reason"
+      )
+        out.valueByLane[sorted.lane] += p.amount;
     }
   }
   return out;
+}
+
+// Customers needed in each group to tell two payment rates apart, at 5% significance (two-sided)
+// and 80% power. A normal approximation.
+export function groupSizeToDetect(p1: number, p2: number): number {
+  const z = 1.959964 + 0.841621;
+  return Math.ceil((z * z * (p1 * (1 - p1) + p2 * (1 - p2))) / (p1 - p2) ** 2);
 }
 
 // Twelve weeks of the same synthetic store, default plan: 10% holdout, no offers.
@@ -84,6 +102,7 @@ export function oneLinkAgainstLanes(weeks = 12) {
     messaged: 0,
     paid: 0,
     value: 0,
+    valueByLane: { retry_now: 0, wait_retry: 0, needs_reason: 0 },
     intoDowntime: 0,
     pendingAsked: 0,
     alreadyPaid: 0,
@@ -96,6 +115,9 @@ export function oneLinkAgainstLanes(weeks = 12) {
     oneLink.messaged += w.messaged;
     oneLink.paid += w.paid;
     oneLink.value += w.value;
+    oneLink.valueByLane.retry_now += w.valueByLane.retry_now;
+    oneLink.valueByLane.wait_retry += w.valueByLane.wait_retry;
+    oneLink.valueByLane.needs_reason += w.valueByLane.needs_reason;
     oneLink.intoDowntime += w.intoDowntime;
     oneLink.pendingAsked += w.pendingAsked;
     oneLink.alreadyPaid += w.alreadyPaid;
@@ -103,7 +125,30 @@ export function oneLinkAgainstLanes(weeks = 12) {
     runs.push(runWeek(week, cfg).items);
   }
   const lanes = results(runs);
+  // Where the lanes' extra money comes from, lane by lane.
+  const edge = (lane: RecoveryLane) =>
+    Math.round(lanes.byLane[lane]?.paidValue ?? 0) - oneLink.valueByLane[lane];
+  const edgeByLane = {
+    retry_now: edge("retry_now"),
+    wait_retry: edge("wait_retry"),
+    needs_reason: edge("needs_reason"),
+  };
+  // The synthetic weeks put 16% of failed payments inside a bank downtime. NPCI's chief put UPI
+  // technical declines at 0.7 to 0.8% of all transactions in 2024, so on an ordinary day the share
+  // is probably lower. The waiting lane's edge shrinks in step with it.
+  const edgeIfDowntimeShareIs = (share: number) =>
+    Math.round(
+      (edgeByLane.wait_retry * share) / 0.16 + edgeByLane.retry_now + edgeByLane.needs_reason,
+    );
+  // Both rules are judged on the same customers: everyone who was not held out.
+  const groupSizeNeeded = groupSizeToDetect(
+    oneLink.paid / lanes.treatedN,
+    lanes.treatedPaidN / lanes.treatedN,
+  );
   return {
+    edgeByLane,
+    edgeIfDowntimeShareIs,
+    groupSizeNeeded,
     oneLink,
     lanes: {
       messaged: lanes.treatedN,

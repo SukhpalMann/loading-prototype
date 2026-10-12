@@ -25,6 +25,7 @@ import type { FailedPayment, Week } from "../data";
 import { REPLY_SCRIPT, messageFor } from "../engine";
 import type { Config, Item, RunEvent } from "../engine";
 import { Assumed, Bubble, LaneTag } from "../ui";
+import { REPLIES } from "../checks/replies/replies";
 
 const TICK_MS = 80;
 const SIM_PER_TICK = 24 * MIN; // a week plays in about 34 seconds
@@ -107,6 +108,7 @@ export function Live({
   offersApprovedAt,
   onApproveOffers,
   onInspect,
+  onReplyTest,
   onGoPlan,
   onNext,
 }: {
@@ -122,6 +124,7 @@ export function Live({
   offersApprovedAt: number | null;
   onApproveOffers: (at: number) => void;
   onInspect: (p: FailedPayment) => void;
+  onReplyTest: () => void;
   onGoPlan: () => void;
   onNext: () => void;
 }) {
@@ -584,7 +587,13 @@ export function Live({
 
           <div className="sa-side">
             {focus ? (
-              <Thread it={focus} clock={clock} cfg={cfg} onInspect={onInspect} />
+              <Thread
+                it={focus}
+                clock={clock}
+                cfg={cfg}
+                onInspect={onInspect}
+                onReplyTest={onReplyTest}
+              />
             ) : (
               <p className="sa-note">Click any line in the feed to see that customer's messages.</p>
             )}
@@ -618,11 +627,13 @@ function Thread({
   clock,
   cfg,
   onInspect,
+  onReplyTest,
 }: {
   it: Item;
   clock: number;
   cfg: Config;
   onInspect: (p: FailedPayment) => void;
+  onReplyTest: () => void;
 }) {
   const p = it.p;
   const sent = it.sendAt !== null && it.sendAt <= clock;
@@ -681,17 +692,29 @@ function Thread({
             <Bubble incoming text={REPLY_SCRIPT.customer(p.amount)} time={fmtClock(replyAt)} />
           ) : null}
           {replyAt !== null && replyAt + MIN <= clock ? (
-            <Bubble text={REPLY_SCRIPT.agent(p.amount)} time={fmtClock(replyAt + MIN)} />
+            <Bubble
+              text={REPLY_SCRIPT.agent(p.amount, p.method === "upi")}
+              time={fmtClock(replyAt + MIN)}
+            />
           ) : null}
           {offerSent ? <Bubble text={messageFor(it, cfg, 2)} time={fmtClock(it.offerAt!)} /> : null}
         </div>
       )}
       {replyAt !== null && replyAt + MIN <= clock ? (
-        <p className="sa-note" style={{ marginTop: 10 }}>
-          The first sort was wrong: the debit could not be seen when the payment was sorted. The
-          reply was read, the link switched off while the payment is checked, and Asha told. This
-          exchange is scripted. In English: "{REPLY_SCRIPT.agentEnglish(p.amount)}"
-        </p>
+        <>
+          <p className="sa-note" style={{ marginTop: 10 }}>
+            The first sort was wrong: the debit could not be seen when the payment was sorted. The
+            reply was read, the link switched off while the payment is checked, and Asha told. In
+            English: "{REPLY_SCRIPT.agentEnglish(p.amount, p.method === "upi")}"
+          </p>
+          <p className="sa-note" style={{ marginTop: 8 }}>
+            This exchange is scripted. Reading such replies is the one job proposed for a model.{" "}
+            <button type="button" className="sa-linkbtn" onClick={onReplyTest}>
+              See a keyword rule and a model read {REPLIES.length} of them
+            </button>
+            .
+          </p>
+        </>
       ) : null}
       {paid ? (
         <p className="sa-approved" style={{ marginTop: 10 }}>

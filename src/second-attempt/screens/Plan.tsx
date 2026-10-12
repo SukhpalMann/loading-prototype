@@ -1,7 +1,15 @@
 import { useMemo, useState } from "react";
 import { MERCHANT, generateWeek, inr } from "../data";
 import type { FailedPayment, Week } from "../data";
-import { LANES, messageFor, project, runWeek, triage, weeksToProof } from "../engine";
+import {
+  LANES,
+  TEST_HOLDOUT_TARGET,
+  messageFor,
+  project,
+  runWeek,
+  testEndWeek,
+  triage,
+} from "../engine";
 import type { Config, LaneId, Triage } from "../engine";
 import { Lock } from "lucide-react";
 import { Assumed, Bubble, LaneIcon, LanguageToggle, Switch } from "../ui";
@@ -58,8 +66,8 @@ export function Plan({
     [week, cfg.offerMinCart],
   );
   const recoverable = proj.toMessage + proj.holdout;
-  const proofWeeks = useMemo(
-    () => weeksToProof(cfg, (i) => runWeek(generateWeek(i), cfg).items),
+  const endWeek = useMemo(
+    () => testEndWeek(cfg, (i) => runWeek(generateWeek(i), cfg).items),
     [cfg],
   );
   const set = (patch: Partial<Config>) => setCfg({ ...cfg, ...patch });
@@ -191,11 +199,12 @@ export function Plan({
             </p>
             {cfg.holdoutPct > 0 ? (
               <p style={{ marginTop: 6 }}>
-                In this simulated store the gap becomes measurable after{" "}
+                The test ends once {TEST_HOLDOUT_TARGET} customers have been held out,{" "}
                 <Assumed>
-                  <b>{proofWeeks ? `about ${proofWeeks} weeks` : "more than 16 weeks"}</b>
-                </Assumed>
-                . A larger holdout gets there sooner and messages fewer customers.
+                  <b>{endWeek ? `in about week ${endWeek}` : "after week 16"}</b>
+                </Assumed>{" "}
+                at this simulated store. The result is read once, then. A larger holdout ends sooner
+                and messages fewer customers.
               </p>
             ) : null}
           </div>

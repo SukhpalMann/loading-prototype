@@ -5,11 +5,13 @@ import { describe, expect, it } from "vitest";
 import { MIN, generateWeek } from "../data";
 import {
   DEFAULT_CONFIG,
+  TEST_HOLDOUT_TARGET,
   codeVsContext,
   oneLinkMisses,
   results,
   runWeek,
   summariseLanes,
+  testEndWeek,
   triage,
 } from "../engine";
 import { oneLinkAgainstLanes } from "./one-link";
@@ -50,18 +52,42 @@ describe("the sample week on the first screen", () => {
   });
 });
 
-describe("twelve weeks on the default plan, the path the video follows: 10% holdout, no offers", () => {
+describe("the default plan, the path the video follows: 10% holdout, no offers", () => {
   const runs = Array.from(
     { length: 12 },
     (_, i) => runWeek(generateWeek(i + 1), DEFAULT_CONFIG).items,
   );
-  const r = results(runs);
+  const upTo = (week: number) => results(runs.slice(0, week));
+  const r = upTo(12);
 
-  it("measures 177 of 586 messaged against 7 of 63 held out", () => {
+  it("plans to read the test in week 12, when 60 customers have been held out", () => {
+    expect(TEST_HOLDOUT_TARGET).toBe(60);
+    expect(testEndWeek(DEFAULT_CONFIG, (i) => runs[i - 1] ?? [])).toBe(12);
+    expect(upTo(11).holdoutN).toBeLessThan(60);
+  });
+
+  it("collects ₹429 a customer from 586 messaged and ₹223 from 63 held out", () => {
     expect([r.treatedPaidN, r.treatedN, r.holdoutPaidN, r.holdoutN]).toEqual([177, 586, 7, 63]);
-    expect(Math.round(r.incremental)).toBe(158997);
-    expect([Math.round(r.incrementalLow), Math.round(r.incrementalHigh)]).toEqual([69817, 215686]);
-    expect(r.proven).toBe(true);
+    expect([Math.round(r.treatedPaidValue), r.holdoutPaidValue]).toEqual([251521, 14037]);
+    expect([Math.round(r.treatedMean), Math.round(r.holdoutMean)]).toEqual([429, 223]);
+  });
+
+  it("reads ₹1,20,955 caused, in a range of ₹6,212 to ₹2,35,697", () => {
+    expect(Math.round(r.incremental)).toBe(120955);
+    expect([Math.round(r.incrementalLow), Math.round(r.incrementalHigh)]).toEqual([6212, 235697]);
+    expect([
+      Math.round(r.perCustomer),
+      Math.round(r.perCustomerLow),
+      Math.round(r.perCustomerHigh),
+    ]).toEqual([206, 11, 402]);
+    expect(r.aboveZero).toBe(true);
+  });
+
+  it("shows why the test is not read early: above zero in week 8, not in week 10", () => {
+    expect(upTo(1).aboveZero).toBe(false);
+    expect(Math.round(upTo(1).incremental)).toBe(-10055);
+    expect(upTo(8).aboveZero).toBe(true);
+    expect(upTo(10).aboveZero).toBe(false);
   });
 
   it("keeps customers who reported a debit in the messaged group", () => {
@@ -72,42 +98,32 @@ describe("twelve weeks on the default plan, the path the video follows: 10% hold
   it("spends ₹76 on 602 messages and gives no discount", () => {
     expect([r.messages, Math.round(r.messageCost), r.discountCost]).toEqual([602, 76, 0]);
   });
-
-  it("is first proven after week 6", () => {
-    const proven = runs.map((_, i) => results(runs.slice(0, i + 1)).proven);
-    expect(proven.indexOf(true) + 1).toBe(6);
-  });
 });
 
-describe("twelve weeks with the cap at 5% and offers approved", () => {
-  const capped = { ...DEFAULT_CONFIG, discountCapPct: 5 };
-  const approved = { ...capped, offersApproved: true };
-  const weekOne = generateWeek(1);
-  // The merchant approves offers a minute after the first one starts waiting, on Saturday.
-  const firstWait = runWeek(weekOne, capped).events.find((e) => e.kind === "offer_wait");
-  const runs = Array.from({ length: 12 }, (_, i) =>
-    i === 0
-      ? runWeek(weekOne, approved, { offersApprovedAt: (firstWait?.t ?? 0) + MIN }).items
-      : runWeek(generateWeek(i + 1), approved).items,
-  );
-
-  it("shows ₹25,114 back after week 1 and does not call it proven", () => {
-    const r = results(runs.slice(0, 1));
-    expect([r.treatedPaidN, r.treatedN, r.holdoutPaidN, r.holdoutN]).toEqual([18, 48, 1, 5]);
-    expect(Math.round(r.treatedPaidValue)).toBe(25114);
-    expect(r.proven).toBe(false);
+describe("other plans", () => {
+  it("reads a 20% holdout in week 7", () => {
+    const cfg = { ...DEFAULT_CONFIG, holdoutPct: 20 };
+    const weekly = (i: number) => runWeek(generateWeek(i), cfg).items;
+    expect(testEndWeek(cfg, weekly)).toBe(7);
+    const read = results(Array.from({ length: 7 }, (_, i) => weekly(i + 1)));
+    expect(read.aboveZero).toBe(true);
+    expect(Math.round(read.incremental)).toBe(101386);
   });
 
-  it("shows ₹1,70,592 caused after 12 weeks, in a range of ₹78,903 to ₹2,28,925", () => {
+  it("with offers approved at a 5% cap, reads ₹1,35,051 after 12 weeks", () => {
+    const capped = { ...DEFAULT_CONFIG, discountCapPct: 5 };
+    const approved = { ...capped, offersApproved: true };
+    const weekOne = generateWeek(1);
+    // The merchant approves offers a minute after the first one starts waiting, on Saturday.
+    const firstWait = runWeek(weekOne, capped).events.find((e) => e.kind === "offer_wait");
+    const runs = Array.from({ length: 12 }, (_, i) =>
+      i === 0
+        ? runWeek(weekOne, approved, { offersApprovedAt: (firstWait?.t ?? 0) + MIN }).items
+        : runWeek(generateWeek(i + 1), approved).items,
+    );
     const r = results(runs);
-    expect([r.treatedPaidN, r.treatedN, r.holdoutPaidN, r.holdoutN]).toEqual([182, 586, 7, 63]);
-    expect(Math.round(r.incremental)).toBe(170592);
-    expect([Math.round(r.incrementalLow), Math.round(r.incrementalHigh)]).toEqual([78903, 228925]);
-    expect(r.proven).toBe(true);
-  });
-
-  it("spends ₹133 on 671 messages and ₹742 on 5 discounted orders", () => {
-    const r = results(runs);
+    expect([r.treatedPaidN, r.treatedN]).toEqual([182, 586]);
+    expect(Math.round(r.incremental)).toBe(135051);
     expect([r.messages, Math.round(r.messageCost), r.discountCost, r.offerPaid]).toEqual([
       671, 133, 742, 5,
     ]);
@@ -124,6 +140,17 @@ describe("one link for everyone, under the same assumed rates", () => {
   it("leaves the four lanes 13 payments and ₹14,633 ahead", () => {
     expect([c.lanes.paid, c.lanes.value]).toEqual([177, 251521]);
     expect([c.extraPayments, c.extraValue]).toEqual([13, 14633]);
+  });
+
+  it("owes nearly all of that edge to waiting out bank downtimes", () => {
+    expect(c.edgeByLane).toEqual({ retry_now: 0, wait_retry: 13836, needs_reason: 797 });
+    // If downtime failures were 5% of failures, not the 16% assumed, the edge would be about ₹5,000.
+    expect(c.edgeIfDowntimeShareIs(0.05)).toBe(5121);
+  });
+
+  it("needs about 6,600 customers in each group to tell the two rules apart", () => {
+    // 164 of 586 against 177 of 586, at 5% significance and 80% power.
+    expect(c.groupSizeNeeded).toBe(6577);
   });
 
   it("sends 244 links into a wrong situation", () => {

@@ -133,7 +133,7 @@ export function triage(p: FailedPayment, week: Week): Triage {
       ...base,
       lane: "do_not_ask",
       variant: "pending",
-      why: "The bank shows the amount as pending. Asking again risks a double payment.",
+      why: "The amount is marked as pending. Asking again risks a second debit.",
       basis: "context",
       confidence: "high",
     };
@@ -344,6 +344,10 @@ export interface RunEvent {
   text: string;
 }
 
+// RBI's rule for a debit with no confirmation at the merchant: circular RBI/2019-20/67 of
+// 20 September 2019 sets auto-reversal within T + 5 days for UPI payments to merchants.
+const REVERSAL_NOTE = "By RBI's rule the bank returns it within five days.";
+
 export interface RunOptions {
   pausedAt?: number | null; // no message leaves at or after this time
   offersApprovedAt?: number | null; // offers approved mid-week go out from this moment, never earlier
@@ -482,7 +486,7 @@ export function runWeek(
           kind: "refunded",
           lane: t.lane,
           id: p.id,
-          text: `${first(p)}'s pending ${inr(p.amount)} did not clear. It returns automatically within 5 working days.`,
+          text: `${first(p)}'s pending ${inr(p.amount)} did not clear. ${REVERSAL_NOTE}`,
         });
       }
       continue;
@@ -580,7 +584,7 @@ export function runWeek(
           kind: "refunded",
           lane: "do_not_ask",
           id: p.id,
-          text: `${first(p)}'s pending ${inr(p.amount)} did not clear. It returns automatically within 5 working days.`,
+          text: `${first(p)}'s pending ${inr(p.amount)} did not clear. ${REVERSAL_NOTE}`,
         });
       }
       continue;
@@ -788,6 +792,15 @@ export interface Results {
   lift: number;
   liftLow: number;
   liftHigh: number;
+  // Money collected per customer, with every customer kept in the group they were assigned to.
+  holdoutPaidValue: number;
+  treatedMean: number;
+  holdoutMean: number;
+  perCustomer: number; // treatedMean minus holdoutMean
+  perCustomerLow: number; // NaN while the held-out group is too small for a range
+  perCustomerHigh: number;
+  hasRange: boolean;
+  // perCustomer times the number of customers messaged
   incremental: number;
   incrementalLow: number;
   incrementalHigh: number;
@@ -818,7 +831,19 @@ export interface Results {
       holdoutPaid: number;
     }
   >;
-  proven: boolean; // the whole interval for the lift sits above zero
+  aboveZero: boolean; // the whole range for money per customer sits above zero
+}
+
+// How many customers are held out before the result is read. Fixed before the test starts, so
+// that a lucky week cannot end it early.
+export const TEST_HOLDOUT_TARGET = 60;
+const MIN_GROUP_FOR_RANGE = 5;
+
+// Two-sided 95% critical value of Student's t, by a Cornish-Fisher expansion. It is within about
+// 2% of the tables from four degrees of freedom up, the smallest case this is used for.
+function tCritical(df: number): number {
+  const z = 1.959964;
+  return z + (z ** 3 + z) / (4 * df) + (5 * z ** 5 + 16 * z ** 3 + 3 * z) / (96 * df * df);
 }
 
 export function results(itemsList: Item[][]): Results {
@@ -850,6 +875,10 @@ export function results(itemsList: Item[][]): Results {
     pendingProtected: 0,
     blockedByPause: 0,
   };
+  // Sums of squares of what each customer paid (zero for those who did not), for the range.
+  let treatedSq = 0,
+    holdoutPaidValue = 0,
+    holdoutSq = 0;
   for (const it of items) {
     r.messageCost += it.cost;
     r.messages += it.messages;
@@ -885,6 +914,8 @@ export function results(itemsList: Item[][]): Results {
       if (it.outcome === "organic") {
         r.holdoutPaidN++;
         L.holdoutPaid++;
+        holdoutPaidValue += it.p.amount;
+        holdoutSq += it.p.amount ** 2;
       }
     } else if (it.sendAt !== null) {
       r.treatedN++;
@@ -892,10 +923,12 @@ export function results(itemsList: Item[][]): Results {
       L.treated++;
       L.value += it.p.amount;
       if (it.outcome === "recovered" || it.outcome === "recovered_offer") {
+        const paid = it.p.amount - it.discount;
         r.treatedPaidN++;
-        r.treatedPaidValue += it.p.amount - it.discount;
+        r.treatedPaidValue += paid;
+        treatedSq += paid ** 2;
         L.paid++;
-        L.paidValue += it.p.amount - it.discount;
+        L.paidValue += paid;
       }
     }
   }
@@ -911,11 +944,42 @@ export function results(itemsList: Item[][]): Results {
   const liftHigh = r.holdoutN
     ? lift + Math.sqrt((tHi - treatedRate) ** 2 + (holdoutRate - lo) ** 2)
     : 0;
-  // Incremental revenue: the lift applied to everyone who was messaged, at the average amount they paid.
+  // What the messages caused: money collected per customer in each group, non-payers counted as
+  // zero, and the difference applied to everyone who was messaged. The range is a Welch interval
+  // on that difference, which allows the two groups to differ in size and in spread.
+  const treatedMean = r.treatedN ? r.treatedPaidValue / r.treatedN : 0;
+  const holdoutMean = r.holdoutN ? holdoutPaidValue / r.holdoutN : 0;
+  const spread = (sum: number, sumSq: number, n: number) =>
+    n > 1 ? Math.max(0, (sumSq - (sum * sum) / n) / (n - 1)) : 0;
   const avgPaid = r.treatedPaidN ? r.treatedPaidValue / r.treatedPaidN : 0;
-  const incremental = r.holdoutN ? lift * r.treatedN * avgPaid : 0;
-  const incrementalLow = liftLow * r.treatedN * avgPaid;
-  const incrementalHigh = liftHigh * r.treatedN * avgPaid;
+  const treatedVar = spread(r.treatedPaidValue, treatedSq, r.treatedN);
+  // With no payer in the held-out group its spread would read as zero. The range then assumes
+  // that one of them could have paid an average amount.
+  const holdoutVar =
+    r.holdoutPaidN > 0
+      ? spread(holdoutPaidValue, holdoutSq, r.holdoutN)
+      : r.holdoutN > 0
+        ? avgPaid ** 2 / r.holdoutN
+        : 0;
+  const hasRange = r.holdoutN >= MIN_GROUP_FOR_RANGE && r.treatedN >= MIN_GROUP_FOR_RANGE;
+  const perCustomer = r.holdoutN ? treatedMean - holdoutMean : 0;
+  let perCustomerLow = NaN,
+    perCustomerHigh = NaN;
+  if (hasRange) {
+    const a = treatedVar / r.treatedN,
+      b = holdoutVar / r.holdoutN;
+    const se = Math.sqrt(a + b);
+    const df =
+      se > 0
+        ? (a + b) ** 2 / ((a * a) / (r.treatedN - 1) + (b * b) / (r.holdoutN - 1))
+        : r.holdoutN - 1;
+    const t = tCritical(Math.max(4, df));
+    perCustomerLow = perCustomer - t * se;
+    perCustomerHigh = perCustomer + t * se;
+  }
+  const incremental = perCustomer * r.treatedN;
+  const incrementalLow = perCustomerLow * r.treatedN;
+  const incrementalHigh = perCustomerHigh * r.treatedN;
   const net = incremental - r.messageCost; // discounts are already netted out of what customers paid
   return {
     ...r,
@@ -926,27 +990,41 @@ export function results(itemsList: Item[][]): Results {
     lift,
     liftLow,
     liftHigh,
+    holdoutPaidValue,
+    treatedMean,
+    holdoutMean,
+    perCustomer,
+    perCustomerLow,
+    perCustomerHigh,
+    hasRange,
     incremental,
     incrementalLow,
     incrementalHigh,
     net,
     byLane,
-    proven: r.holdoutN > 0 && liftLow > 0,
+    aboveZero: hasRange && perCustomerLow > 0,
   };
 }
 
-// How many weeks until the whole interval for the lift sits above zero, at this holdout.
-// Simulated on the same synthetic weeks the results screen uses.
-export function weeksToProof(
+// Customers held out of the recovery lanes in one week's run.
+export function heldOut(items: Item[]): number {
+  let n = 0;
+  for (const it of items) if (it.holdout && RECOVERY_LANES.includes(it.t.lane)) n++;
+  return n;
+}
+
+// The week in which the planned number of held-out customers is reached. The result is read
+// once, in that week. Simulated on the same synthetic weeks the results screen uses.
+export function testEndWeek(
   cfg: Config,
   weekly: (index: number) => Item[],
   maxWeeks = 16,
 ): number | null {
   if (cfg.holdoutPct === 0) return null;
-  const acc: Item[][] = [];
+  let held = 0;
   for (let n = 1; n <= maxWeeks; n++) {
-    acc.push(weekly(n));
-    if (results(acc).proven) return n;
+    held += heldOut(weekly(n));
+    if (held >= TEST_HOLDOUT_TARGET) return n;
   }
   return null;
 }
@@ -1054,8 +1132,8 @@ export function messageFor(
   }
   if (t.lane === "do_not_ask" && t.variant === "pending") {
     return hi
-      ? `Hi ${n}, ${shop} par aapka ${amt} ka payment shayad abhi process ho raha hai. Please abhi dobara pay na karein. Payment ho gaya to order confirm kar denge, nahi hua to aapko bata denge.`
-      : `Hi ${n}, your payment of ${amt} to ${shop} may still be processing. Please do not pay again for now. We will confirm your order if it goes through, and tell you if it does not.`;
+      ? `Hi ${n}, ${shop} par aapka ${amt} ka payment shayad abhi process ho raha hai. Please abhi dobara pay na karein. Payment ho gaya to order confirm kar denge. ${ifNot(p.method === "upi", true)}`
+      : `Hi ${n}, your payment of ${amt} to ${shop} may still be processing. Please do not pay again for now. We will confirm your order if it goes through. ${ifNot(p.method === "upi", false)}`;
   }
   if (t.lane === "needs_reason") {
     const emi = p.amount >= 3000;
@@ -1067,11 +1145,25 @@ export function messageFor(
   return "";
 }
 
+// What a customer is told about money that was debited for a payment that did not complete.
+// For UPI it can cite RBI's rule (auto-reversal within T + 5 days for a debit with no confirmation
+// at the merchant). For other methods the circular gives no such line, so the message promises
+// only to report back.
+function ifNot(upi: boolean, hinglish: boolean): string {
+  if (hinglish)
+    return upi
+      ? "Nahi hua to bank ko paisa 5 din ke andar wapas karna hota hai."
+      : "Nahi hua to hum aapko bata denge.";
+  return upi
+    ? "If it does not, your bank has to return the amount within five days."
+    : "If it does not, we will tell you.";
+}
+
 export const REPLY_SCRIPT = {
   customer: (amount: number) =>
     `Mere account se ${inr(amount)} kat gaye the. Dobara pay karna hai kya?`,
-  agent: (amount: number) =>
-    `Batane ke liye thank you. Jab tak hum ${inr(amount)} ka payment check kar rahe hain, link band kar diya hai. Please dobara pay na karein. Payment ho gaya to order confirm kar denge, nahi hua to aapko bata denge.`,
-  agentEnglish: (amount: number) =>
-    `Thank you for telling us. We have switched off the link while we check the payment of ${inr(amount)}. Please do not pay again. We will confirm your order if the payment went through, and tell you if it did not.`,
+  agent: (amount: number, upi: boolean) =>
+    `Batane ke liye thank you. Jab tak hum ${inr(amount)} ka payment check kar rahe hain, link band kar diya hai. Please dobara pay na karein. Payment ho gaya to order confirm kar denge. ${ifNot(upi, true)}`,
+  agentEnglish: (amount: number, upi: boolean) =>
+    `Thank you for telling us. We have switched off the link while we check the payment of ${inr(amount)}. Please do not pay again. We will confirm your order if the payment goes through. ${ifNot(upi, false)}`,
 };

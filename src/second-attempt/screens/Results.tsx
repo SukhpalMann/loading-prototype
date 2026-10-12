@@ -1,6 +1,14 @@
 import { useMemo, useState } from "react";
 import { DAY, MERCHANT, MIN, generateWeek, inr, inrShort } from "../data";
-import { LANES, RECOVERY_LANES, results, runWeek, wilson } from "../engine";
+import {
+  LANES,
+  RECOVERY_LANES,
+  TEST_HOLDOUT_TARGET,
+  heldOut,
+  results,
+  runWeek,
+  wilson,
+} from "../engine";
 import type { Config, Item } from "../engine";
 import { CircleAlert, CircleCheck, Hourglass } from "lucide-react";
 import { Assumed, LaneIcon } from "../ui";
@@ -39,11 +47,11 @@ function niceStep(raw: number): number {
 function CausedChart({
   series,
   shown,
-  proofWeek,
+  endWeek,
 }: {
   series: WeekPoint[];
   shown: number;
-  proofWeek: number | null;
+  endWeek: number | null;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const data = series.slice(0, shown).filter((d) => d.measured);
@@ -75,17 +83,18 @@ function CausedChart({
     data.length > 1
       ? `${path((d) => d.high, data, "M")} ${path((d) => d.low, [...data].reverse(), "L")} Z`
       : null;
-  const proof = proofWeek !== null && proofWeek <= shown ? proofWeek : null;
+  const end = endWeek !== null && endWeek <= 12 ? endWeek : null;
   const h = hover === null ? null : (data.find((d) => d.week === hover) ?? null);
   const tipShift = h === null ? "-50%" : h.week <= 2 ? "0%" : h.week >= 10 ? "-100%" : "-50%";
 
   return (
     <div className="sa-chart">
-      <h3 className="sa-h3">What Second Attempt caused, added up week by week</h3>
+      <h3 className="sa-h3">What the messages caused, added up week by week</h3>
       <p className="sa-note">
-        The line is the best estimate. The band is the range it could sit in. While the band touches
-        zero, nothing is shown. A real test would fix its length in advance, because checking every
-        week makes a false alarm more likely.
+        The line is the running estimate. The band is the range it could sit in. The length of the
+        test was fixed in advance
+        {end !== null ? `, so nothing is declared before week ${end}` : ""}: a range that clears
+        zero one week can fall back the next.
       </p>
       <div className="sa-chart__plot">
         <svg
@@ -122,22 +131,16 @@ function CausedChart({
               Week {wk}
             </text>
           ))}
-          {proof !== null ? (
+          {end !== null ? (
             <g>
-              <line
-                className="sa-chart__mark"
-                x1={x(proof)}
-                x2={x(proof)}
-                y1={m.t - 4}
-                y2={H - m.b}
-              />
+              <line className="sa-chart__mark" x1={x(end)} x2={x(end)} y1={m.t - 4} y2={H - m.b} />
               <text
                 className="sa-chart__note"
-                x={x(proof) + (proof <= 7 ? 7 : -7)}
+                x={x(end) + (end <= 7 ? 7 : -7)}
                 y={m.t - 12}
-                textAnchor={proof <= 7 ? "start" : "end"}
+                textAnchor={end <= 7 ? "start" : "end"}
               >
-                Week {proof}: the range clears zero
+                Week {end}: the test ends and is read
               </text>
             </g>
           ) : null}
@@ -171,7 +174,7 @@ function CausedChart({
             }}
           >
             <b>After week {h.week}</b>
-            <span>Best estimate {inr(h.est)}</span>
+            <span>Running estimate {inr(h.est)}</span>
             <span>
               Range {inr(h.low)} to {inr(h.high)}
             </span>
@@ -215,7 +218,7 @@ export function Results({
           est: upTo.incremental,
           low: upTo.incrementalLow,
           high: upTo.incrementalHigh,
-          measured: upTo.holdoutN > 0,
+          measured: upTo.hasRange,
         };
       }),
     [all],
@@ -245,21 +248,32 @@ export function Results({
   // What one payment link for everyone would have done with the same customers, under the same
   // assumed rates. A bad moment is a link sent into a live downtime or to a pending debit.
   const oneLink = useMemo(() => {
-    const t = { paid: 0, value: 0, badMoment: 0 };
+    const t = { paid: 0, value: 0, badMoment: 0, waitValue: 0 };
     for (let i = 1; i <= weeks; i++) {
       const w = oneLinkWeek(generateWeek(i), cfg.holdoutPct);
       t.paid += w.paid;
       t.value += w.value;
       t.badMoment += w.intoDowntime + w.pendingAsked;
+      t.waitValue += w.valueByLane.wait_retry;
     }
     return t;
   }, [weeks, cfg.holdoutPct]);
 
-  const weeksToProof = useMemo(() => {
+  // The test ends in the week the planned number of held-out customers is reached. The result is
+  // read once, on the data up to that week, and never earlier.
+  const endWeek = useMemo(() => {
     if (cfg.holdoutPct === 0) return null;
-    for (let n = 1; n <= all.length; n++) if (results(all.slice(0, n)).proven) return n;
+    let held = 0;
+    for (let n = 1; n <= all.length; n++) {
+      held += heldOut(all[n - 1] ?? []);
+      if (held >= TEST_HOLDOUT_TARGET) return n;
+    }
     return null;
   }, [all, cfg.holdoutPct]);
+  const read = useMemo(
+    () => (endWeek !== null && weeks >= endWeek ? results(all.slice(0, endWeek)) : null),
+    [all, endWeek, weeks],
+  );
 
   const variants = useMemo(() => {
     const tally: Record<string, { n: number; paid: number }> = {};
@@ -294,6 +308,7 @@ export function Results({
   }
 
   const [tLo, tHi] = wilson(r.treatedPaidN, r.treatedN);
+  const waitEdge = (r.byLane["wait_retry"]?.paidValue ?? 0) - oneLink.waitValue;
   const anyway = r.treatedPaidValue - r.incremental;
   const span = weeks === 1 ? "one week" : `${weeks} weeks`;
   const noHoldout = cfg.holdoutPct === 0 || r.holdoutN === 0;
@@ -321,14 +336,19 @@ export function Results({
           After {span}, {inrShort(r.treatedPaidValue)} came back. Nobody can say how much of it
           Second Attempt caused.
         </h1>
-      ) : r.proven ? (
+      ) : read === null ? (
+        <h1 className="sa-h1">
+          After {span}, {inrShort(r.treatedPaidValue)} came back. It is too early to say how much
+          the messages caused.
+        </h1>
+      ) : read.aboveZero ? (
         <h1 className="sa-h1">
           After {span}, {inrShort(r.incremental)} came back that would not have on its own.
         </h1>
       ) : (
         <h1 className="sa-h1">
-          After {span}, {inrShort(r.treatedPaidValue)} came back. It is too early to say how much
-          Second Attempt caused.
+          After {span}, {inrShort(r.treatedPaidValue)} came back. The test ended without a clear
+          answer.
         </h1>
       )}
 
@@ -345,7 +365,7 @@ export function Results({
               <span>Got a message</span>
               <span>
                 <b className="sa-num">{pc(r.treatedRate, 1)}</b> paid, {r.treatedPaidN} of{" "}
-                {r.treatedN}
+                {r.treatedN}, {inr(r.treatedMean)} a customer
               </span>
             </div>
             <div className="sa-bar__track">
@@ -365,7 +385,7 @@ export function Results({
                 ) : (
                   <>
                     <b className="sa-num">{pc(r.holdoutRate, 1)}</b> paid, {r.holdoutPaidN} of{" "}
-                    {r.holdoutN}
+                    {r.holdoutN}, {inr(r.holdoutMean)} a customer
                   </>
                 )}
               </span>
@@ -390,43 +410,51 @@ export function Results({
           </div>
           <p className="sa-note" style={{ marginTop: 8 }}>
             The black lines show the range each true rate could sit in, given how few customers are
-            in the group.
+            in the group. Money a customer counts everyone in the group, payers or not.
           </p>
 
           {noHoldout ? (
             <div className="sa-verdict sa-verdict--no">
               <CircleAlert size={20} aria-hidden="true" />
               <div>
-                <b>No proof is possible.</b> Without a holdout, every payment after a message looks
-                like a win, including customers who were coming back anyway. Set a holdout on the
-                plan to measure the lift.
+                <b>Nothing can be measured.</b> Without a holdout, every payment after a message
+                looks like a win, including customers who were coming back anyway. Set a holdout on
+                the plan.
               </div>
             </div>
-          ) : r.proven ? (
+          ) : read === null ? (
+            <div className="sa-verdict sa-verdict--no">
+              <Hourglass size={20} aria-hidden="true" />
+              <div>
+                <b>Too early to read.</b> The test ends when {TEST_HOLDOUT_TARGET} customers have
+                been held out{endWeek !== null ? `, in about week ${endWeek}` : ""}. So far{" "}
+                {r.holdoutN} {r.holdoutN === 1 ? "has" : "have"}. Customers who got a message have
+                paid {inr(r.treatedMean)} each and those held out {inr(r.holdoutMean)}, a gap that
+                means nothing at this size.
+              </div>
+            </div>
+          ) : read.aboveZero ? (
             <div className="sa-verdict sa-verdict--yes">
               <CircleCheck size={20} aria-hidden="true" />
               <div>
-                <b>The range has cleared zero.</b> Customers who got a message paid {pts(r.lift)}{" "}
-                points more often than those held out. At the cautious end of the range the gap is{" "}
-                {pts(r.liftLow)} points.
+                <b>The planned test has ended.</b> Customers who got a message paid{" "}
+                {inr(read.perCustomer)} more each than those held out, in a range of{" "}
+                {inr(read.perCustomerLow)} to {inr(read.perCustomerHigh)}. They also paid{" "}
+                {pts(read.lift)} points more often.
               </div>
             </div>
           ) : (
             <div className="sa-verdict sa-verdict--no">
-              <Hourglass size={20} aria-hidden="true" />
+              <CircleAlert size={20} aria-hidden="true" />
               <div>
-                <b>Not proven yet.</b> The held-out group is only {r.holdoutN} customers, so the
-                true gap could be anywhere from {pts(r.liftLow)} to {pts(r.liftHigh)} points.{" "}
-                {weeksToProof
-                  ? `At a ${cfg.holdoutPct}% holdout this simulated store needs about ${weeksToProof} weeks. A larger holdout gets there sooner and messages fewer customers.`
-                  : "A larger holdout would get there sooner."}
+                <b>The planned test has ended without a clear answer.</b> The gap could be anywhere
+                from {inr(read.perCustomerLow)} to {inr(read.perCustomerHigh)} a customer, which
+                includes zero. A larger holdout or a longer test would narrow it.
               </div>
             </div>
           )}
 
-          {noHoldout ? null : (
-            <CausedChart series={series} shown={weeks} proofWeek={weeksToProof} />
-          )}
+          {noHoldout ? null : <CausedChart series={series} shown={weeks} endWeek={endWeek} />}
 
           <div className="sa-money">
             <div>
@@ -438,17 +466,19 @@ export function Results({
             {noHoldout ? null : (
               <>
                 <div>
-                  <span>Would have come back anyway, at the holdout's rate</span>
+                  <span>Would have come back anyway, at the held-out customers' pace</span>
                   <span className="sa-num">{inr(-anyway)}</span>
                 </div>
                 <div>
-                  <span>Caused by Second Attempt{r.proven ? "" : ", best estimate"}</span>
+                  <span>Caused by the messages{read?.aboveZero ? "" : ", running estimate"}</span>
                   <span className="sa-num">{inr(r.incremental)}</span>
                 </div>
                 <div>
                   <span>Range for that figure</span>
                   <span className="sa-num">
-                    {inr(r.incrementalLow)} to {inr(r.incrementalHigh)}
+                    {r.hasRange
+                      ? `${inr(r.incrementalLow)} to ${inr(r.incrementalHigh)}`
+                      : "Too few held out to say"}
                   </span>
                 </div>
               </>
@@ -459,7 +489,7 @@ export function Results({
             </div>
             {noHoldout ? null : (
               <div className="is-total">
-                <span>Net gain{r.proven ? "" : ", not yet proven"}</span>
+                <span>Net gain{read?.aboveZero ? "" : ", running estimate"}</span>
                 <span className="sa-num">{inr(r.net)}</span>
               </div>
             )}
@@ -513,8 +543,14 @@ export function Results({
               {r.treatedPaidValue >= oneLink.value ? "more" : "less"}. A bad moment is a link sent
               while the customer's bank was still down, or while money was pending. The lanes' count
               is pending debits that could not be seen when the payment was sorted. Each of those
-              links was switched off after a reply. One store is too small to measure a gap this
-              size. A real test needs thousands of customers in each group.
+              links was switched off after a reply.
+            </p>
+            <p className="sa-note" style={{ marginTop: 6 }}>
+              {waitEdge > 0 && r.treatedPaidValue > oneLink.value
+                ? `${inr(waitEdge)} of the extra money comes from waiting out bank downtimes, which this synthetic data may make more common than they are. `
+                : ""}
+              One store is too small to measure a gap this size. A real test needs thousands of
+              customers in each group.
             </p>
           </section>
 
@@ -568,8 +604,8 @@ export function Results({
                 <LaneIcon lane="do_not_ask" />
                 <span className="sa-num">{r.pendingProtected}</span>
                 <p>
-                  <b>Customers kept from paying twice.</b> {r.pendingProtected - r.movedByReply} got
-                  no link because the amount was pending. {r.movedByReply} got a link, reported a
+                  <b>Customers with money in limbo.</b> {r.pendingProtected - r.movedByReply} got no
+                  link because the amount was pending. {r.movedByReply} got a link, reported a
                   debit, and had it switched off.
                 </p>
               </li>
@@ -622,15 +658,17 @@ export function Results({
                 <b>
                   {noHoldout
                     ? "A holdout is recommended."
-                    : r.proven
+                    : read?.aboveZero
                       ? "The holdout can shrink."
                       : "The holdout stays."}
                 </b>
                 {noHoldout
                   ? "Without one, nothing above can be checked."
-                  : r.proven
-                    ? `The range has cleared zero at ${cfg.holdoutPct}%. Dropping to 5% messages more customers and keeps the check running.`
-                    : `${cfg.holdoutPct}% stays until the range clears zero${weeksToProof ? `, about week ${weeksToProof}` : ""}.`}
+                  : read === null
+                    ? `${cfg.holdoutPct}% stays until the test ends${endWeek !== null ? `, in about week ${endWeek}` : ""}.`
+                    : read.aboveZero
+                      ? `The planned test ended with its range above zero. Dropping to 5% messages more customers and keeps a check running.`
+                      : `The test ended without a clear answer, so ${cfg.holdoutPct}% stays for another round. A larger share would shorten it.`}
               </li>
             </ul>
             <p className="sa-note" style={{ marginTop: 8 }}>

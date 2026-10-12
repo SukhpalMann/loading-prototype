@@ -12,6 +12,7 @@ import {
 } from "../engine";
 import type { LaneId, MissKind, Triage } from "../engine";
 import { LaneIcon, LaneTag } from "../ui";
+import { MODEL_SCORE, RULE_SCORE } from "../checks/replies/score";
 
 const DOES: Record<LaneId, string> = {
   retry_now: "One link, ten minutes later. No discount.",
@@ -65,10 +66,12 @@ let introPlayed = false;
 export function Brief({
   week,
   onInspect,
+  onReplyTest,
   onNext,
 }: {
   week: Week;
   onInspect: (p: FailedPayment) => void;
+  onReplyTest: () => void;
   onNext: () => void;
 }) {
   const all = useMemo(
@@ -386,7 +389,14 @@ export function Brief({
               moved or the order was already paid
               {timedOut.other > 0 ? `. ${timedOut.other} went to other lanes` : ""}. All of this is
               rules. A model is proposed only for what rules cannot read: unfamiliar error text and
-              customers' replies.
+              customers' replies. In a blind test on {RULE_SCORE.total} replies written by hand, a
+              keyword rule missed {RULE_SCORE.missed.length} of the {RULE_SCORE.moneyMoved}{" "}
+              customers who said money had left their account. A model missed{" "}
+              {MODEL_SCORE.missed.length === 0 ? "none" : MODEL_SCORE.missed.length}.{" "}
+              <button type="button" className="sa-linkbtn" onClick={onReplyTest}>
+                See the replies
+              </button>
+              .
             </p>
           </div>
         </section>
