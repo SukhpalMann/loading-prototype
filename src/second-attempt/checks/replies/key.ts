@@ -1,0 +1,36 @@
+// The answer key, written by Sukhpal Singh Mann with the replies and kept back until both
+// readers' answers were committed (commit 0487c1b, 11:06 PM IST on 12 October 2026). He sent
+// it at 11:07 PM. D = money has left the account or the order is already paid. N = not.
+
+export const ANSWER_KEY: ("D" | "N")[] = [
+  "D",
+  "N",
+  "D",
+  "D",
+  "N",
+  "N",
+  "D",
+  "N",
+  "D",
+  "D",
+  "N",
+  "N",
+  "D",
+  "N",
+  "D",
+  "N",
+  "N",
+  "D",
+  "N",
+  "D",
+  "D",
+  "N",
+  "N",
+  "D",
+  "N",
+  "D",
+  "N",
+  "D",
+  "N",
+  "D",
+];

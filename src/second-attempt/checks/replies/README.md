@@ -25,6 +25,46 @@ The costly mistake is a **missed D**: the link stays on for a customer who has a
 
 The commit history of this folder shows that order.
 
+## Result
+
+Thirty replies, fifteen of which say money moved.
+
+| Reader       | Right, of 30 | Debit reports caught, of 15 | Missed | False alarms, of 15 |
+| ------------ | ------------ | --------------------------- | ------ | ------------------- |
+| Keyword rule | 17           | 10                          | 5      | 8                   |
+| Model        | 30           | 15                          | 0      | 0                   |
+
+The files, in the order they were committed: [`rule.ts`](rule.ts) and [`model-prompt.md`](model-prompt.md), then [`replies.ts`](replies.ts), [`model-answers.ts`](model-answers.ts) and [`answers-before-key.md`](answers-before-key.md), then [`key.ts`](key.ts) and [`score.ts`](score.ts). [`score.test.ts`](score.test.ts) pins the result.
+
+### Where the keyword rule missed a debit report
+
+These are the costly mistakes: the link would have stayed on.
+
+| #   | Reply                                                             | Why the rule missed it                                               |
+| --- | ----------------------------------------------------------------- | -------------------------------------------------------------------- |
+| 4   | "screen pe failed tha but balance 1248 kam ho gaya"               | The balance fell. No listed phrase sits close enough to "balance"    |
+| 7   | "dusra link mila tha uspe kar diya, receipt bhi hai"              | Paid through another link. "kar diya" appears with no payment word   |
+| 15  | "पहले खाते में 5000 थे अब 3752 हैं"                               | Arithmetic: the balance fell by exactly the order amount             |
+| 18  | "refund nahi chahiye mujhe. jo 1248 liye hain uska order bhej do" | "refund" is cancelled by the negation, and "liye hain" is not listed |
+| 26  | "card nahi chala toh bank transfer kar diya store ko"             | Paid by bank transfer, a route the list does not cover               |
+
+### Where the keyword rule raised a false alarm
+
+| #         | What happened                                                                             |
+| --------- | ----------------------------------------------------------------------------------------- |
+| 8, 16, 22 | The word "paid" used about not paying: "did you get paid?", "paid krna tha", a typed slip |
+| 14        | A question about the keyword itself: "PAID reply karne se order confirm hoga kya?"        |
+| 11        | "katne se pehle hi cancel kar diya": "kar diya" read as done                              |
+| 23, 25    | "refund" used to say that no refund is due                                                |
+| 27        | "koi paisa nahi gaya": the negation sits inside the matched phrase                        |
+
+### What this shows, and what it does not
+
+- It shows that a gap exists on hard replies: negation, self-correction, arithmetic, paraphrase and mixed script.
+- It does not show the size of the gap in real traffic. These replies were written to include hard cases. Most real replies are easy, and on the easy ones here (1, 3, 10, 20) both readers agree.
+- A longer keyword list would fix some of these and add new false alarms. Each fix is one more pattern.
+- A cautious first version can use both: switch the link off when either reader says money moved. On this set that misses nothing and keeps the rule's eight false alarms.
+
 ## Limits
 
 - The set is small and written by one person in one evening. It shows whether a gap exists, not how large it is.
