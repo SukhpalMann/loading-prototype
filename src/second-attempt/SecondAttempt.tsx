@@ -204,6 +204,12 @@ function About({ onClose }: { onClose: () => void }) {
           the comparison is with the rule, not with the product.
         </p>
         <p>
+          <b>What Razorpay already does inside checkout.</b> Its Intelligent Payment Retry weighs
+          error messages and instrument downtimes to suggest a next step while the customer is still
+          in checkout. Second Attempt starts after the customer has left, where the public material
+          shows one link for everyone.
+        </p>
+        <p>
           <b>Not built.</b> No message is sent, no payment link is real, and there is no login.
           Learning is shown as proposed adjustments computed from the simulated outcomes.
         </p>

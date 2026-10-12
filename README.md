@@ -10,7 +10,7 @@ A concept prototype by Sukhpal Singh Mann for the Razorpay x ISB AI PM Build Cha
 
 ## The idea
 
-When a customer presses Pay and the payment fails, the usual recovery is one rule: send everyone the same payment link. That link is wrong for many of them. The bank may still be down, the money may already have left the account, or the order may already be paid.
+Razorpay already helps a customer retry inside checkout. Once the customer has left, the usual recovery is one rule: send everyone the same payment link. That link is wrong for many of them. The bank may still be down, the money may already have left the account, or the order may already be paid.
 
 Second Attempt reads why each payment failed and sorts it into a lane.
 

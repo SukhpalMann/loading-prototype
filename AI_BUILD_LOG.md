@@ -45,10 +45,11 @@ No API keys were needed. The prototype makes no model calls at run time. See sec
 
 ## 3. AI outputs I rejected, corrected or improved
 
-**Two I overruled myself.**
+**Three I overruled or challenged myself.**
 
 1. **A plan that depended on merchant interviews.** Before any building, Claude asked me to hold fifteen-minute merchant conversations, so that the note would carry a real number and I could test the direction against a merchant's own words. I could not reach a merchant that day, and that day was all the time I had. I told Claude to go ahead without them. The cost is stated, not hidden: the one-pager says the evidence is desk research with no merchant interviews, the persona is labelled as a persona, and real failure data from one merchant is the first test listed.
 2. **Research split across four sub-agents.** Claude's first move on research was to hand it to four parallel sub-agents, each waiting for my approval. I declined. The pages were public, so I saw no reason to approve each step. I told it to read them directly, and it did the research in one thread.
+3. **A claim that Razorpay's material never uses the failure reason.** Claude's research said Razorpay's public material on failed payments did not mention the failure reason, and the first one-pager said so. Before recording the video I asked Claude whether the research was complete. Its re-check found a Razorpay post it had missed: Intelligent Payment Retry (February 2024), which weighs error messages and instrument downtimes inside checkout. The claim was true of the recovery posts and incomplete as a picture of the product line. The one-pager, the prototype and the video script now say what the sources support: Razorpay is cause-aware inside checkout and sends one link once the customer has left. Second Attempt covers that second moment.
 
 **Corrections Claude made to its own output, which I kept.** These came from the verification steps in the workflow, and each one changed the submission.
 
@@ -63,15 +64,15 @@ No API keys were needed. The prototype makes no model calls at run time. See sec
 
 ## 4. What AI did, and what I decided or built myself
 
-| Area                   | Claude                                                                 | Me                                                                                                                                                                      |
-| ---------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Track and constraints  |                                                                        | Chose Track 2. Set the rule that everything had to be finished in one day, with no merchant calls possible.                                                             |
-| Research               | Searched, read, verified quotes, flagged weak evidence                 | Told it to research directly instead of pausing for approvals. Supplied the correct brief when it flagged that I had attached the wrong file.                           |
-| Product direction      | Proposed five directions, scored them, argued against its own top pick | Chose cause-aware failed-payment recovery over the COD and reorder options.                                                                                             |
-| Product rules          | Proposed options and trade-offs                                        | Chose the name. Chose that three no-discount lanes run on their own and offers wait for approval. Chose discount as a last resort only. Chose a 10% holdout by default. |
-| Prototype              | Wrote all the code, the synthetic data and the tests                   | Chose Lovable for hosting. Created the Lovable project and connected it to GitHub. Published the app, made the repository public and reviewed the live version.         |
-| One-pager, script, log | Drafted from my decisions                                              | Own the final wording. Nothing goes into the form without my review.                                                                                                    |
-| Video                  | Drafted the script and the click path                                  | Record and narrate it myself.                                                                                                                                           |
+| Area                   | Claude                                                                 | Me                                                                                                                                                                                                                                                        |
+| ---------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Track and constraints  |                                                                        | Chose Track 2. Set the rule that everything had to be finished in one day, with no merchant calls possible.                                                                                                                                               |
+| Research               | Searched, read, verified quotes, flagged weak evidence                 | Told it to research directly instead of pausing for approvals. Supplied the correct brief when it flagged that I had attached the wrong file. Asked for a completeness check before recording, which surfaced a Razorpay product the research had missed. |
+| Product direction      | Proposed five directions, scored them, argued against its own top pick | Chose cause-aware failed-payment recovery over the COD and reorder options.                                                                                                                                                                               |
+| Product rules          | Proposed options and trade-offs                                        | Chose the name. Chose that three no-discount lanes run on their own and offers wait for approval. Chose discount as a last resort only. Chose a 10% holdout by default.                                                                                   |
+| Prototype              | Wrote all the code, the synthetic data and the tests                   | Chose Lovable for hosting. Created the Lovable project and connected it to GitHub. Published the app, made the repository public and reviewed the live version.                                                                                           |
+| One-pager, script, log | Drafted from my decisions                                              | Own the final wording. Nothing goes into the form without my review.                                                                                                                                                                                      |
+| Video                  | Drafted the script and the click path                                  | Record and narrate it myself.                                                                                                                                                                                                                             |
 
 ## 5. Known limitations, risks and verification
 
@@ -85,7 +86,7 @@ No API keys were needed. The prototype makes no model calls at run time. See sec
 
 **Risks.**
 
-- Razorpay's current recovery may already treat causes differently. Public material shows one link for all failed payers and does not mention the failure reason.
+- Razorpay's recovery messages may already use the failure reason. Its in-checkout retry does. Public material on the messages shows one link for all failed payers and does not mention the failure reason.
 - A simple rules table may capture most of the value. The share of failures that need context is 25 of 68 in the synthetic week, and that share is itself an assumption.
 - A failed-payment notice may not qualify as a WhatsApp utility message, which would raise message cost about sevenfold.
 - A 10% holdout proves the lift slowly at low volume: about six weeks for a store of this size.
@@ -104,6 +105,9 @@ No API keys were needed. The prototype makes no model calls at run time. See sec
 ## Sources
 
 - Razorpay, Failed Payment Recovery (22 Feb 2024): https://razorpay.com/blog/razorpay-failed-payment-recovery/
+- Razorpay, Intelligent Payment Retry (23 Feb 2024): https://razorpay.com/blog/razorpay-intelligent-payment-retry/
+- Razorpay, Introducing the most effective way to recover failed payments (4 Jan 2023): https://razorpay.com/blog/introducing-the-most-effective-way-to-recover-failed-payments/
+- Razorpay docs, Payment Gateway features (Checkout Retry Flow, Downtime Communication on Checkout): https://razorpay.com/docs/payments/payment-gateway/features/
 - Razorpay, Meet RAY on WhatsApp (2 Sep 2026): https://razorpay.com/blog/meet-ray-your-always-on-ai-account-manager-now-live-on-whatsapp/
 - Razorpay, Agent Studio: AI Agents by Razorpay (12 Mar 2026): https://razorpay.com/blog/agent-studio-ai-agents-by-razorpay/
 - Razorpay, Agent Studio principles, guardrails and merchant control (30 Mar 2026): https://razorpay.com/blog/razorpay-agent-studio-principles-guardrails-and-merchant-control/

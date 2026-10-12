@@ -54,9 +54,9 @@ export function Brief({
         Last week {total} customers tried to pay {MERCHANT.name} and could not.
       </h1>
       <p className="sa-lede">
-        That is {inrShort(value)} in carts where the customer had already pressed Pay. Today each of
-        them gets the same payment link. Second Attempt reads why each payment failed and sorts them
-        into four lanes.
+        That is {inrShort(value)} in carts where the customer pressed Pay, failed, and left. Today
+        each of them gets the same payment link. Second Attempt reads why each payment failed and
+        sorts them into four lanes.
       </p>
 
       <div className="sa-board">
