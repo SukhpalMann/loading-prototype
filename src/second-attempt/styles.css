@@ -1083,13 +1083,19 @@ button.sa-token:focus-visible {
   transform: translateX(16px);
 }
 .sa-guard {
-  position: sticky;
-  top: 16px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 22px 22px 24px;
   box-shadow: 0 12px 32px rgba(15, 27, 45, 0.08);
+}
+/* The panel sticks only when all of it fits the window. On a short screen a stuck panel would
+   keep its approve button below the fold until the very end of the page. */
+@media (min-height: 980px) {
+  .sa-guard {
+    position: sticky;
+    top: 16px;
+  }
 }
 .sa-field {
   padding: 15px 0;
