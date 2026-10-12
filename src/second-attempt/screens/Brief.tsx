@@ -181,13 +181,13 @@ export function Brief({
     <div>
       <section className="sa-yard">
         <h1 className="sa-h1">
-          Last week {total} customers tried to pay {MERCHANT.name.replace(/ /g, "\u00a0")} and could
-          not.
+          Last week {total} customers pressed Pay at {MERCHANT.name.replace(/ /g, "\u00a0")}, and
+          the payment failed.
         </h1>
         <p className="sa-lede">
-          That is {inrShort(value)} in carts where the customer pressed Pay, failed, and left. Today
-          each of them gets the same payment link. Second Attempt reads why each payment failed and
-          sorts them into four lanes.
+          That is {inrShort(value)} in carts. The simplest recovery rule sends every one of them the
+          same payment link. Second Attempt reads why each payment failed and sorts them into four
+          lanes. A fifth group gets no message at all, by rule.
         </p>
         <div className="sa-yard__bar">
           <span
@@ -196,7 +196,7 @@ export function Brief({
             aria-label="How failed payments are handled"
           >
             <button type="button" aria-pressed={mode === "today"} onClick={() => show("today")}>
-              Today: one link for all
+              One link for all
             </button>
             <button type="button" aria-pressed={mode === "sorted"} onClick={() => show("sorted")}>
               Second Attempt: four lanes
@@ -323,9 +323,10 @@ export function Brief({
             ))}
           </ul>
           <p className="sa-note" style={{ marginTop: 14 }}>
-            Compared with one rule: a payment link 30 minutes after every failure. These are counts
-            of facts in last week's batch, not predictions. The tag names the lane that handles each
-            case.
+            Compared with one simple rule: a payment link 30 minutes after every failure. These are
+            counts of facts in last week's batch, not predictions. A real recovery product may
+            already skip some of them, such as orders paid later. The tag names the lane that
+            handles each case.
           </p>
         </section>
 
@@ -376,13 +377,16 @@ export function Brief({
             <p>
               <b>
                 {cvc.code} of {cvc.total} could be sorted by the reason code alone. {cvc.context}{" "}
-                needed context.
+                needed a second fact: the downtime feed, the payment's status, or what happened
+                next.
               </b>{" "}
               For example, <code>payment_timed_out</code> appeared {timedOut.all} times under one
               code. {timedOut.retry} could be retried at once, {timedOut.wait} had to wait for a
               bank to come back, and {timedOut.hold} should not be asked again because the money had
               moved or the order was already paid
-              {timedOut.other > 0 ? `. ${timedOut.other} went to other lanes` : ""}.
+              {timedOut.other > 0 ? `. ${timedOut.other} went to other lanes` : ""}. All of this is
+              rules. A model is proposed only for what rules cannot read: unfamiliar error text and
+              customers' replies.
             </p>
           </div>
         </section>

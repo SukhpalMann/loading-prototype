@@ -34,9 +34,9 @@ describe("the sample week on the first screen", () => {
     });
   });
 
-  it("sorts 43 by the reason code alone and 25 with context", () => {
+  it("sorts 35 by the reason code alone and 33 with a second fact", () => {
     const c = codeVsContext(week);
-    expect([c.code, c.context]).toEqual([43, 25]);
+    expect([c.code, c.context]).toEqual([35, 33]);
   });
 
   it("sends payment_timed_out to three lanes: 5, 2 and 4", () => {
@@ -50,17 +50,27 @@ describe("the sample week on the first screen", () => {
   });
 });
 
-describe("twelve weeks on the default plan, 10% holdout and no offers", () => {
+describe("twelve weeks on the default plan, the path the video follows: 10% holdout, no offers", () => {
   const runs = Array.from(
     { length: 12 },
     (_, i) => runWeek(generateWeek(i + 1), DEFAULT_CONFIG).items,
   );
   const r = results(runs);
 
-  it("measures 177 of 573 messaged against 7 of 63 held out", () => {
-    expect([r.treatedPaidN, r.treatedN, r.holdoutPaidN, r.holdoutN]).toEqual([177, 573, 7, 63]);
-    expect(Math.round(r.incremental)).toBe(161049);
+  it("measures 177 of 586 messaged against 7 of 63 held out", () => {
+    expect([r.treatedPaidN, r.treatedN, r.holdoutPaidN, r.holdoutN]).toEqual([177, 586, 7, 63]);
+    expect(Math.round(r.incremental)).toBe(158997);
+    expect([Math.round(r.incrementalLow), Math.round(r.incrementalHigh)]).toEqual([69817, 215686]);
     expect(r.proven).toBe(true);
+  });
+
+  it("keeps customers who reported a debit in the messaged group", () => {
+    expect(r.movedByReply).toBe(13);
+    expect(r.pendingProtected - r.movedByReply).toBe(16);
+  });
+
+  it("spends ₹76 on 602 messages and gives no discount", () => {
+    expect([r.messages, Math.round(r.messageCost), r.discountCost]).toEqual([602, 76, 0]);
   });
 
   it("is first proven after week 6", () => {
@@ -69,7 +79,7 @@ describe("twelve weeks on the default plan, 10% holdout and no offers", () => {
   });
 });
 
-describe("twelve weeks on the path the video follows: cap at 5%, offers approved", () => {
+describe("twelve weeks with the cap at 5% and offers approved", () => {
   const capped = { ...DEFAULT_CONFIG, discountCapPct: 5 };
   const approved = { ...capped, offersApproved: true };
   const weekOne = generateWeek(1);
@@ -83,16 +93,16 @@ describe("twelve weeks on the path the video follows: cap at 5%, offers approved
 
   it("shows ₹25,114 back after week 1 and does not call it proven", () => {
     const r = results(runs.slice(0, 1));
-    expect([r.treatedPaidN, r.treatedN, r.holdoutPaidN, r.holdoutN]).toEqual([18, 47, 1, 5]);
+    expect([r.treatedPaidN, r.treatedN, r.holdoutPaidN, r.holdoutN]).toEqual([18, 48, 1, 5]);
     expect(Math.round(r.treatedPaidValue)).toBe(25114);
     expect(r.proven).toBe(false);
   });
 
-  it("shows ₹1,72,700 caused after 12 weeks, in a range of ₹82,856 to ₹2,30,038", () => {
+  it("shows ₹1,70,592 caused after 12 weeks, in a range of ₹78,903 to ₹2,28,925", () => {
     const r = results(runs);
-    expect([r.treatedPaidN, r.treatedN, r.holdoutPaidN, r.holdoutN]).toEqual([182, 573, 7, 63]);
-    expect(Math.round(r.incremental)).toBe(172700);
-    expect([Math.round(r.incrementalLow), Math.round(r.incrementalHigh)]).toEqual([82856, 230038]);
+    expect([r.treatedPaidN, r.treatedN, r.holdoutPaidN, r.holdoutN]).toEqual([182, 586, 7, 63]);
+    expect(Math.round(r.incremental)).toBe(170592);
+    expect([Math.round(r.incrementalLow), Math.round(r.incrementalHigh)]).toEqual([78903, 228925]);
     expect(r.proven).toBe(true);
   });
 
@@ -107,7 +117,7 @@ describe("twelve weeks on the path the video follows: cap at 5%, offers approved
 describe("one link for everyone, under the same assumed rates", () => {
   const c = oneLinkAgainstLanes(12);
 
-  it("recovers 164 payments worth ₹2,36,888 from the same 573 customers", () => {
+  it("recovers 164 payments worth ₹2,36,888 from 573 customers", () => {
     expect([c.oneLink.messaged, c.oneLink.paid, c.oneLink.value]).toEqual([573, 164, 236888]);
   });
 

@@ -82,18 +82,20 @@ No API keys were needed. The prototype makes no model calls at run time. See sec
 
 - **All data is synthetic.** The merchant, customers, payments and bank downtimes are invented. Field names follow Razorpay's public payment entity and Payment Downtime API. UPI reason codes and descriptions come from Razorpay's public UPI error documentation. Card and netbanking values are illustrative.
 - **Outcomes are simulated from assumed rates.** For example, 33% of customers who slipped at the last step pay after a retry message, and 12% come back with no message. None of these rates is measured. The prototype lists every assumption under "Assumptions and what is simulated".
-- **The model's judgments are scripted.** The sorting is deterministic code that reads the same fields a model would. The Hinglish reply and the agent's answer are written in advance. In production a language model would read the long tail of bank error text and customer replies.
+- **There is no model in the prototype.** The sorting is rules. The Hinglish reply and the answer to it are written in advance. The role proposed for a language model is narrow: reading unfamiliar bank error text and customers' free-text replies, and handing structured facts to the rules. It has not been built or tested against a rules-and-keywords baseline.
 - **No merchant interviews.** The current workaround is described from Razorpay's own posts and vendor playbooks.
 - **Nothing is sent.** There is no WhatsApp, SMS or payment link behind the prototype.
 
 **Risks.**
 
 - Razorpay's recovery messages may already use the failure reason. Its in-checkout retry does. Public material on the messages shows one link for all failed payers and does not mention the failure reason.
-- The simulated result is measured against customers who got no message, so most of it is the effect of sending any message at all. A check under the same assumed rates puts one link for everyone at ₹2.37 lakh recovered over 12 weeks and the four lanes, with no offers, at ₹2.52 lakh: about ₹15,000 more, plus the wrong messages avoided. The check is in [`src/second-attempt/checks/one-link.ts`](src/second-attempt/checks/one-link.ts). The prototype's screens do not show this comparison. The three-arm test on the one-pager is how it would be measured.
+- The simulated result is measured against customers who got no message, so most of it is the effect of sending any message at all. A check under the same assumed rates puts one link for everyone at ₹2.37 lakh recovered over 12 weeks and the four lanes, with no offers, at ₹2.52 lakh: about ₹15,000 more, plus the wrong messages avoided. The check is in [`src/second-attempt/checks/one-link.ts`](src/second-attempt/checks/one-link.ts), and the results screen now shows the comparison. A real test of a gap this small needs thousands of customers in each group, which one store cannot supply.
 - The count of 30 misdirected links in 68 is against a simple rule that sends a link to every failed payer. Razorpay's product may already skip orders that were paid later or blocked for risk. Without those two groups the count is 15 of 68.
-- A simple rules table may capture most of the value. The share of failures that need context is 25 of 68 in the synthetic week, and that share is itself an assumption.
+- A simple rules table may capture most of the value. In the synthetic week 35 of 68 failures are sorted by the reason code alone and 33 need a second fact, such as the downtime feed. Both are rules, and that split is itself an assumption. The model's proposed role is narrower: unfamiliar error text and free-text replies.
 - A failed-payment notice may not qualify as a WhatsApp utility message, which would raise message cost about sevenfold.
-- A 10% holdout proves the lift slowly at low volume: about six weeks for a store of this size.
+- A 10% holdout shows a gap slowly at low volume: about six weeks in the simulation for a store of this size. The screen checks the range every week, which makes a false alarm more likely. A real test would fix its length in advance.
+- Revenue caused is the gap in payment rates times the average payment. A production test would compare money collected per customer.
+- Whether a pending debit can be seen when a payment is sorted is not verified. I found no such field in Razorpay's public payment record. In the prototype it is a synthetic field.
 
 **Verification steps taken.**
 

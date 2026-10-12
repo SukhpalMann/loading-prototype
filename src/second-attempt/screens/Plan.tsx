@@ -68,9 +68,9 @@ export function Plan({
     <div>
       <h1 className="sa-h1">Here is what runs next week, and what waits for you.</h1>
       <p className="sa-lede">
-        Three lanes cost no discount, so they run on their own once you approve the plan. Any offer
-        waits for your approval. You can change every rule on the right, and stop everything at any
-        time.
+        Three lanes send one message each and give nothing away, so they run on their own once you
+        approve the plan. Any offer waits for your approval. You can change the limits on the right,
+        switch a lane off, and stop everything at any time.
       </p>
 
       <div className="sa-plan">
@@ -191,11 +191,11 @@ export function Plan({
             </p>
             {cfg.holdoutPct > 0 ? (
               <p style={{ marginTop: 6 }}>
-                At this store's volume, proof takes{" "}
+                In this simulated store the gap becomes measurable after{" "}
                 <Assumed>
                   <b>{proofWeeks ? `about ${proofWeeks} weeks` : "more than 16 weeks"}</b>
                 </Assumed>
-                . A larger holdout proves it sooner and messages fewer customers.
+                . A larger holdout gets there sooner and messages fewer customers.
               </p>
             ) : null}
           </div>

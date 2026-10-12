@@ -688,9 +688,9 @@ function Thread({
       )}
       {replyAt !== null && replyAt + MIN <= clock ? (
         <p className="sa-note" style={{ marginTop: 10 }}>
-          The first sort was wrong: the bank had not yet reported the debit. The reply was read, the
-          status re-checked, the link switched off and Asha told. In English: "
-          {REPLY_SCRIPT.agentEnglish(p.amount)}"
+          The first sort was wrong: the debit could not be seen when the payment was sorted. The
+          reply was read, the link switched off while the payment is checked, and Asha told. This
+          exchange is scripted. In English: "{REPLY_SCRIPT.agentEnglish(p.amount)}"
         </p>
       ) : null}
       {paid ? (

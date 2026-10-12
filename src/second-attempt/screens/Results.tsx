@@ -4,6 +4,7 @@ import { LANES, RECOVERY_LANES, results, runWeek, wilson } from "../engine";
 import type { Config, Item } from "../engine";
 import { CircleAlert, CircleCheck, Hourglass } from "lucide-react";
 import { Assumed, LaneIcon } from "../ui";
+import { oneLinkWeek } from "../checks/one-link";
 
 const SCALE = 0.6; // bars run from 0% to 60%
 const w = (rate: number) => `${Math.min(100, (rate / SCALE) * 100)}%`;
@@ -83,7 +84,8 @@ function CausedChart({
       <h3 className="sa-h3">What Second Attempt caused, added up week by week</h3>
       <p className="sa-note">
         The line is the best estimate. The band is the range it could sit in. While the band touches
-        zero, nothing is proven.
+        zero, nothing is shown. A real test would fix its length in advance, because checking every
+        week makes a false alarm more likely.
       </p>
       <div className="sa-chart__plot">
         <svg
@@ -240,6 +242,19 @@ export function Results({
     return { messages, paid };
   }, [weekOne]);
 
+  // What one payment link for everyone would have done with the same customers, under the same
+  // assumed rates. A bad moment is a link sent into a live downtime or to a pending debit.
+  const oneLink = useMemo(() => {
+    const t = { paid: 0, value: 0, badMoment: 0 };
+    for (let i = 1; i <= weeks; i++) {
+      const w = oneLinkWeek(generateWeek(i), cfg.holdoutPct);
+      t.paid += w.paid;
+      t.value += w.value;
+      t.badMoment += w.intoDowntime + w.pendingAsked;
+    }
+    return t;
+  }, [weeks, cfg.holdoutPct]);
+
   const weeksToProof = useMemo(() => {
     if (cfg.holdoutPct === 0) return null;
     for (let n = 1; n <= all.length; n++) if (results(all.slice(0, n)).proven) return n;
@@ -317,6 +332,11 @@ export function Results({
         </h1>
       )}
 
+      <p className="sa-lede">
+        This is measured against customers who got no message. It does not show that four lanes beat
+        one link. The first card on the right makes that comparison.
+      </p>
+
       <div className="sa-res">
         <section className="sa-proof">
           <h2 className="sa-h2">Did the messages cause it?</h2>
@@ -386,8 +406,9 @@ export function Results({
             <div className="sa-verdict sa-verdict--yes">
               <CircleCheck size={20} aria-hidden="true" />
               <div>
-                <b>The gap is real.</b> Customers who got a message paid {pts(r.lift)} points more
-                often. Even at the cautious end of the range the gap is {pts(r.liftLow)} points.
+                <b>The range has cleared zero.</b> Customers who got a message paid {pts(r.lift)}{" "}
+                points more often than those held out. At the cautious end of the range the gap is{" "}
+                {pts(r.liftLow)} points.
               </div>
             </div>
           ) : (
@@ -397,8 +418,8 @@ export function Results({
                 <b>Not proven yet.</b> The held-out group is only {r.holdoutN} customers, so the
                 true gap could be anywhere from {pts(r.liftLow)} to {pts(r.liftHigh)} points.{" "}
                 {weeksToProof
-                  ? `At a ${cfg.holdoutPct}% holdout this store needs about ${weeksToProof} weeks. A larger holdout proves it sooner and messages fewer customers.`
-                  : "A larger holdout would prove it sooner."}
+                  ? `At a ${cfg.holdoutPct}% holdout this simulated store needs about ${weeksToProof} weeks. A larger holdout gets there sooner and messages fewer customers.`
+                  : "A larger holdout would get there sooner."}
               </div>
             </div>
           )}
@@ -461,6 +482,43 @@ export function Results({
 
         <div>
           <section className="sa-card">
+            <h2 className="sa-h2">Against one link for everyone</h2>
+            <table className="sa-table">
+              <thead>
+                <tr>
+                  <th>Rule</th>
+                  <th>Paid</th>
+                  <th>Came back</th>
+                  <th>Links at a bad moment</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>One link for all</td>
+                  <td>{oneLink.paid}</td>
+                  <td>{inr(oneLink.value)}</td>
+                  <td>{oneLink.badMoment}</td>
+                </tr>
+                <tr>
+                  <td>Four lanes</td>
+                  <td>{r.treatedPaidN}</td>
+                  <td>{inr(r.treatedPaidValue)}</td>
+                  <td>{r.movedByReply}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="sa-note" style={{ marginTop: 10 }}>
+              The same customers under the same assumed rates. The lanes bring back{" "}
+              {inr(Math.abs(r.treatedPaidValue - oneLink.value))}{" "}
+              {r.treatedPaidValue >= oneLink.value ? "more" : "less"}. A bad moment is a link sent
+              while the customer's bank was still down, or while money was pending. The lanes' count
+              is pending debits that could not be seen when the payment was sorted. Each of those
+              links was switched off after a reply. One store is too small to measure a gap this
+              size. A real test needs thousands of customers in each group.
+            </p>
+          </section>
+
+          <section className="sa-card">
             <h2 className="sa-h2">By lane</h2>
             <table className="sa-table">
               <thead>
@@ -497,7 +555,7 @@ export function Results({
           </section>
 
           <section className="sa-card">
-            <h2 className="sa-h2">What the sorting prevented</h2>
+            <h2 className="sa-h2">What the lanes did differently</h2>
             <ul className="sa-prev">
               <li>
                 <LaneIcon lane="wait_retry" />
@@ -510,8 +568,9 @@ export function Results({
                 <LaneIcon lane="do_not_ask" />
                 <span className="sa-num">{r.pendingProtected}</span>
                 <p>
-                  <b>Customers not asked to pay twice</b> while their money was pending.{" "}
-                  {r.movedByReply} of them told us in a reply.
+                  <b>Customers kept from paying twice.</b> {r.pendingProtected - r.movedByReply} got
+                  no link because the amount was pending. {r.movedByReply} got a link, reported a
+                  debit, and had it switched off.
                 </p>
               </li>
               <li>
@@ -539,16 +598,17 @@ export function Results({
               once.n >= 20 &&
               slip.paid / Math.max(1, slip.n) - once.paid / once.n >= 0.08 ? (
                 <li>
-                  <b>Declines with no cause move lanes.</b>
-                  Customers declined once with no cause given paid {pc(once.paid / once.n)} of the
-                  time in Retry now, against {pc(slip.paid / Math.max(1, slip.n))} for customer
-                  slips. From next week they are shown other ways to pay first.
+                  <b>A test is proposed for declines with no cause.</b>
+                  They paid {pc(once.paid / once.n)} of the time after a retry link, against{" "}
+                  {pc(slip.paid / Math.max(1, slip.n))} for customer slips. That gap does not show
+                  another message would do better, so half of them would be shown other ways to pay
+                  first, and the two compared.
                 </li>
               ) : (
                 <li>
                   <b>No lane changes yet.</b>
-                  No group is large enough to tell a real difference from noise. Lanes change only
-                  when the gap is clear.
+                  No group is large enough to tell a real difference from noise. A lane changes only
+                  after a test inside that group.
                 </li>
               )}
               {down && down.n >= 20 ? (
@@ -569,13 +629,13 @@ export function Results({
                 {noHoldout
                   ? "Without one, nothing above can be checked."
                   : r.proven
-                    ? `The lift is proven at ${cfg.holdoutPct}%. Dropping to 5% messages more customers and keeps the check running.`
-                    : `${cfg.holdoutPct}% stays until the lift is proven${weeksToProof ? `, about week ${weeksToProof}` : ""}.`}
+                    ? `The range has cleared zero at ${cfg.holdoutPct}%. Dropping to 5% messages more customers and keeps the check running.`
+                    : `${cfg.holdoutPct}% stays until the range clears zero${weeksToProof ? `, about week ${weeksToProof}` : ""}.`}
               </li>
             </ul>
             <p className="sa-note" style={{ marginTop: 8 }}>
-              These adjustments are computed from the simulated outcomes above. You approve each one
-              before it applies.
+              These proposals are computed from the simulated outcomes above. In the product none
+              would apply until you approve it. This prototype only lists them.
             </p>
           </section>
         </div>

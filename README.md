@@ -26,18 +26,18 @@ The merchant reviews every lane and message, sets a holdout and a discount cap, 
 
 ## The four screens
 
-1. **Last week.** 68 failed payments, one square each. The page opens on today's rule, one link for all, with the 30 wrong links in red. The squares then sort into the lanes. Click any square to read that payment's record.
+1. **Last week.** 68 failed payments, one square each. The page opens on the simplest rule, one link for all, with the 30 misdirected links in red. The squares then sort into the lanes. Click any square to read that payment's record.
 2. **The plan.** Each lane's rule and message, in English or Hinglish, with the merchant's guardrails: holdout, discount cap, minimum cart for offers and quiet hours.
 3. **This week, live.** A simulated week with a bank downtime, a customer who replies that her money was already cut, an offer waiting for approval, a stop button and an audit trail.
-4. **What it achieved.** Customers who got a message against a holdout who did not, with ranges, after 1, 4 and 12 weeks. A chart adds up what was caused week by week and shows the week the range clears zero. The product does not claim credit until the holdout supports it.
+4. **What it achieved.** Customers who got a message against a holdout who did not, with ranges, after 1, 4 and 12 weeks. A chart adds up what was caused week by week and shows the week the range clears zero. A card compares the four lanes with one link for everyone under the same assumed rates.
 
 ## What is real and what is not
 
 - **All data is synthetic.** The merchant, customers, payments and bank downtimes are invented. Field names follow Razorpay's public payment entity and Payment Downtime API, and the UPI reason codes come from Razorpay's public error documentation.
 - **Outcomes are simulated** from assumed rates. Every assumption is listed in the prototype under "Assumptions and what is simulated".
-- **The sorting is deterministic code,** not a live model. In production a language model would read the long tail of bank error text and customer replies. Here those cases are explicit checks, so the prototype behaves the same way every time.
+- **The sorting is rules, not a model.** No model is called anywhere. The role proposed for a language model is narrow: reading unfamiliar bank error text and customers' free-text replies, and handing structured facts to the rules. Verified payment status and rules would decide every action. The reply exchange on the live screen is scripted.
 - **Nothing is sent.** There is no WhatsApp, SMS or payment link behind it, and no login.
-- **The result is measured against no message.** The last screen compares customers who got a message with a holdout who got none, so most of the figure is the effect of sending any message. Under the same assumed rates, one link for everyone recovers ₹2.37 lakh over 12 weeks and the four lanes, with no offers, ₹2.52 lakh. One link would also go out 52 times while the customer's bank was still down, and ask 30 customers whose money was pending to pay again. The check is in [`checks/one-link.ts`](src/second-attempt/checks/one-link.ts).
+- **The result is measured against no message.** The last screen compares customers who got a message with a holdout who got none, so most of the figure is the effect of sending any message. Under the same assumed rates, one link for everyone recovers ₹2.37 lakh over 12 weeks and the four lanes, with no offers, ₹2.52 lakh. One link would also go out 52 times while the customer's bank was still down, and ask 30 customers whose money was pending to pay again. The last screen shows this comparison, and the check is in [`checks/one-link.ts`](src/second-attempt/checks/one-link.ts).
 
 ## Code map
 

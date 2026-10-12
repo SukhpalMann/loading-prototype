@@ -128,7 +128,8 @@ export default function SecondAttempt() {
           Concept prototype for the Razorpay x ISB AI PM Build Challenge. Not a Razorpay product.
         </span>
         <span>
-          All data is synthetic and the model's judgments are scripted. Nothing is sent to anyone.
+          All data is synthetic. The sorting is rules and the replies are scripted. Nothing is sent
+          to anyone.
         </span>
         <button type="button" onClick={() => setAbout(true)}>
           Assumptions and what is simulated
@@ -170,10 +171,12 @@ function About({ onClose }: { onClose: () => void }) {
           assumption.
         </p>
         <p>
-          <b>The sorting is real logic, not a live model.</b> Lanes are assigned by code that reads
-          the same fields a model would. In production, a language model reads the long tail of bank
-          error text and customer replies. Here those cases are written as explicit checks so the
-          prototype behaves the same way every time.
+          <b>The sorting is rules, not a model.</b> Lanes are assigned by code, and no model is
+          called anywhere in this prototype. The role proposed for a language model is narrow:
+          reading unfamiliar bank error text and customers' free-text replies, and handing
+          structured facts to the rules. Verified payment status and rules would still decide every
+          action, and the model would have to beat a rules-and-keywords baseline before it shipped.
+          The reply exchange on the live screen is scripted.
         </p>
         <p>
           <b>Outcomes are simulated</b> from these assumed rates. None of them is measured, and
@@ -205,14 +208,27 @@ function About({ onClose }: { onClose: () => void }) {
         <p>
           <b>The comparison rule</b> is one payment link 30 minutes after every failure. Razorpay's
           public material describes its Failed Payment Recovery as sending a link to customers whose
-          payment failed. I could not verify how that product treats downtime or pending amounts, so
-          the comparison is with the rule, not with the product.
+          payment failed. I could not verify how that product treats downtime, pending amounts,
+          orders paid later or risk blocks, so the comparison is with the simple rule, not with the
+          product. If the product already skips paid orders and risk blocks, 15 of last week's 68
+          links are misdirected, not 30.
         </p>
         <p>
-          <b>What Razorpay already does inside checkout.</b> Its Intelligent Payment Retry weighs
-          error messages and instrument downtimes to suggest a next step while the customer is still
-          in checkout. Second Attempt starts after the customer has left, where the public material
-          shows one link for everyone.
+          <b>What exists already.</b> Razorpay's Intelligent Payment Retry weighs error messages and
+          instrument downtimes to suggest a next step while the customer is still in checkout.
+          Cashfree Resolve, described by Cashfree in September 2026, places an AI voice call within
+          60 seconds of a failed payment and opens with the likely failure reason. Second Attempt is
+          the message-based version of that idea for the time after checkout, and it adds two
+          things: deciding when not to contact a customer at all, and a holdout that measures the
+          result.
+        </p>
+        <p>
+          <b>How the result is measured, and its limits.</b> Every customer stays in the group they
+          were assigned to. Revenue caused is the gap in payment rates times the average payment,
+          which is an approximation. A production test would compare money collected per customer,
+          fix its length in advance and pool many merchants. Whether a pending debit can be seen
+          when a payment is sorted is not verified: I found no such field in Razorpay's public
+          payment record.
         </p>
         <p>
           <b>Not built.</b> No message is sent, no payment link is real, and there is no login.

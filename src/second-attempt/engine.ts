@@ -1,7 +1,8 @@
 // Second Attempt: the policy (triage and guardrails) and a simulated run.
-// The triage below is deterministic code standing in for the model. In production the
-// long tail of bank error text and customer replies would be read by an LLM; here the
-// same decisions are written as explicit checks so the prototype is reproducible.
+// The triage below is deterministic rules. Rules and verified payment status decide every
+// action. The role proposed for a language model is narrower: reading unfamiliar bank error
+// text and customers' free-text replies, and handing structured facts to these rules. Here
+// those cases are written as explicit checks so the prototype is reproducible.
 // Outcomes are SIMULATED from the assumptions in ASSUMPTIONS. They are not findings.
 
 import {
@@ -10,7 +11,6 @@ import {
   MIN,
   MERCHANT,
   fmtClock,
-  fmtDate,
   fmtDayClock,
   inr,
   istHour,
@@ -160,7 +160,8 @@ export function triage(p: FailedPayment, week: Week): Triage {
       why: sharedCode
         ? `Reason code payment_timed_out usually means a slow customer. Here there was a downtime on ${dt.label} at the time, so the bank failed, not the customer.`
         : `Downtime on ${dt.label} from ${fmtClock(dt.begin)} to ${fmtClock(dt.end)}. A link sent before it ends fails again.`,
-      basis: sharedCode ? "context" : "code",
+      // The reason code never says a downtime is still running. The downtime feed does.
+      basis: "context",
       confidence: "high",
     };
   }
@@ -460,7 +461,7 @@ export function runWeek(
           kind: "status",
           lane: t.lane,
           id: p.id,
-          text: `Status message to ${first(p)}: ${inr(p.amount)} is pending at the bank, do not pay again.`,
+          text: `Status message to ${first(p)}: ${inr(p.amount)} may still be processing, do not pay again.`,
         });
       }
       const resolveAt = p.failedAt + (2 + p.truth.delayHrs) * HOUR;
@@ -559,7 +560,7 @@ export function runWeek(
         kind: "moved",
         lane: "do_not_ask",
         id: p.id,
-        text: `Status re-checked: pending at the bank. Link switched off and ${first(p)} moved to Do not ask again.`,
+        text: `Link switched off while the payment is checked. ${first(p)} moved to Do not ask again.`,
       });
       const resolveAt = replyAt + (2 + p.truth.delayHrs) * HOUR;
       if (p.truth.u2 < A.lateAuthCaptured) {
@@ -873,7 +874,9 @@ export function results(itemsList: Item[][]): Results {
       it.sendAt > it.p.failedAt + 15 * MIN
     )
       r.heldForDowntime++;
-    if (!RECOVERY_LANES.includes(it.t.lane) || it.movedByReply) continue;
+    // Everyone stays in the group they were assigned to. A customer who reported a debit after a
+    // message still counts as messaged, and as not recovered by it.
+    if (!RECOVERY_LANES.includes(it.t.lane)) continue;
     const L = byLane[it.t.lane]!; // present: the line above keeps only recovery lanes
     if (it.holdout) {
       r.holdoutN++;
@@ -1029,15 +1032,14 @@ export function messageFor(
     shop = MERCHANT.name;
   const link = "mittimoss.example/pay";
   if (t.lane === "needs_reason" && step === 2) {
-    const until = fmtDate(p.failedAt + 4 * DAY);
     return hi
-      ? `Hi ${n}, aapka ${shop} cart abhi bhi saved hai. ${until} tak order complete karne par ${cfg.discountCapPct}% off: ${link}\nSTOP bhejkar messages band karein.`
-      : `Hi ${n}, your ${shop} cart is still saved. Here is ${cfg.discountCapPct}% off if you complete it by ${until}: ${link}\nReply STOP to opt out.`;
+      ? `Hi ${n}, aapka ${shop} cart abhi bhi saved hai. Agle 48 ghante mein order complete karne par ${cfg.discountCapPct}% off: ${link}\nSTOP bhejkar messages band karein.`
+      : `Hi ${n}, your ${shop} cart is still saved. Here is ${cfg.discountCapPct}% off if you complete it in the next 48 hours: ${link}\nReply STOP to opt out.`;
   }
   if (t.lane === "retry_now" && t.variant === "technical") {
     return hi
-      ? `Hi ${n}, ${shop} par aapka ${amt} ka payment ek technical dikkat ki wajah se fail hua. Aapki galti nahi thi, ab sab theek hai. Cart saved hai: ${link}\nAgar paisa kat gaya ho to PAID reply karein, hum pehle check karenge.`
-      : `Hi ${n}, your payment of ${amt} to ${shop} failed because of a technical fault on the payment side, not yours. It is working now. Your cart is saved: ${link}\nIf money left your account, reply PAID and we will check before you pay again.`;
+      ? `Hi ${n}, ${shop} par aapka ${amt} ka payment ek technical dikkat ki wajah se nahi ho paya. Aapki galti nahi thi. Cart saved hai: ${link}\nAgar paisa kat gaya ho to PAID reply karein, hum pehle check karenge.`
+      : `Hi ${n}, your payment of ${amt} to ${shop} did not go through because of a technical problem on the payment side, not a mistake on your side. Your cart is saved: ${link}\nIf money left your account, reply PAID and we will check before you pay again.`;
   }
   if (t.lane === "retry_now") {
     return hi
@@ -1052,15 +1054,15 @@ export function messageFor(
   }
   if (t.lane === "do_not_ask" && t.variant === "pending") {
     return hi
-      ? `Hi ${n}, aapke bank mein ${shop} order ka ${amt} pending dikh raha hai. Please dobara pay na karein. Clear hote hi order confirm ho jayega. Nahi hua to paisa 5 working days mein apne aap wapas aa jayega.`
-      : `Hi ${n}, your bank shows ${amt} as pending for your ${shop} order. Please do not pay again. If it clears, we confirm your order at once. If not, the amount returns to you automatically within 5 working days.`;
+      ? `Hi ${n}, ${shop} par aapka ${amt} ka payment shayad abhi process ho raha hai. Please abhi dobara pay na karein. Payment ho gaya to order confirm kar denge, nahi hua to aapko bata denge.`
+      : `Hi ${n}, your payment of ${amt} to ${shop} may still be processing. Please do not pay again for now. We will confirm your order if it goes through, and tell you if it does not.`;
   }
   if (t.lane === "needs_reason") {
     const emi = p.amount >= 3000;
     const each = inr(Math.ceil(p.amount / 3));
     return hi
-      ? `Hi ${n}, ${shop} par aapka ${amt} ka payment us account se nahi ho paya. Aap doosre tareeke se pay kar sakte hain: doosra UPI app, card, pay later${emi ? `, ya ${each} ki 3 monthly instalments` : ""}. Cart saved hai: ${link}`
-      : `Hi ${n}, your payment of ${amt} to ${shop} could not be completed with that account. You can pay another way: a different UPI app, a card, pay later${emi ? `, or 3 monthly instalments of ${each}` : ""}. Your cart is saved: ${link}`;
+      ? `Hi ${n}, ${shop} par aapka ${amt} ka payment us account se nahi ho paya. Aap doosre tareeke se pay kar sakte hain: doosra bank account ya card, pay later${emi ? `, ya ${each} ki 3 monthly instalments` : ""}. Cart saved hai: ${link}`
+      : `Hi ${n}, your payment of ${amt} to ${shop} could not be completed with that account. You can pay another way: a different bank account or card, pay later${emi ? `, or 3 monthly instalments of ${each}` : ""}. Your cart is saved: ${link}`;
   }
   return "";
 }
@@ -1069,7 +1071,7 @@ export const REPLY_SCRIPT = {
   customer: (amount: number) =>
     `Mere account se ${inr(amount)} kat gaye the. Dobara pay karna hai kya?`,
   agent: (amount: number) =>
-    `Batane ke liye thank you. Maine abhi check kiya: aapke bank mein ${inr(amount)} pending dikh raha hai. Please dobara pay na karein, maine link band kar diya hai. Clear hote hi order confirm ho jayega. Nahi hua to paisa 5 working days mein apne aap wapas aa jayega.`,
+    `Batane ke liye thank you. Jab tak hum ${inr(amount)} ka payment check kar rahe hain, link band kar diya hai. Please dobara pay na karein. Payment ho gaya to order confirm kar denge, nahi hua to aapko bata denge.`,
   agentEnglish: (amount: number) =>
-    `Thank you for telling us. I have just checked: your bank shows ${inr(amount)} as pending. Please do not pay again. I have switched off the link. If it clears, your order is confirmed at once. If not, the amount returns to you automatically within 5 working days.`,
+    `Thank you for telling us. We have switched off the link while we check the payment of ${inr(amount)}. Please do not pay again. We will confirm your order if the payment went through, and tell you if it did not.`,
 };
