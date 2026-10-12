@@ -4,7 +4,7 @@ The 90-second video is a screen recording of the prototype. It was not captured 
 
 - [`rec.mjs`](rec.mjs) is the recorder and the storyboard.
 - [`cues.json`](cues.json) is the narration, line by line, with the caption shown for each line.
-- [`fit.py`](fit.py) and [`align_ps.py`](align_ps.py) fit the picture to a voice recording.
+- [`fit.py`](fit.py) and [`align_ps.py`](align_ps.py) fit the picture to a voice recording, and [`finish.sh`](finish.sh) runs the whole last step.
 
 ## Why a script
 
@@ -28,6 +28,8 @@ The storyboard has sixteen anchors, one for each line of the narration. An ancho
 2. `python3 video/fit.py voice.m4a` finds where each line starts and ends in the recording. It does this two ways and compares them: forced alignment of the script's words with PocketSphinx, and a method that uses only pauses and line lengths. It then schedules the lines, tightens pauses if the result would pass 90 seconds, and writes a voice track and `timings.json`.
 3. `node video/rec.mjs <url> out.mp4 timings.json` renders the picture again. The holds between two anchors are stretched or squeezed so each anchor lands with its line.
 4. ffmpeg joins the picture and the voice.
+
+[`finish.sh`](finish.sh) runs steps 2 to 4 and checks that the result is under 90 seconds.
 
 ## Running it
 

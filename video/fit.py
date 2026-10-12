@@ -35,8 +35,8 @@ ANCHOR_LINE = {
     "close": 15, "c_end": 16,
 }
 SR = 48000
-PRE = 0.07  # keep this much before a line's first sound
-POST = 0.14  # and this much after its last
+PRE = 0.12  # keep up to this much before a line's first sound
+POST = 0.18  # and up to this much after its last
 
 
 def run(cmd):
@@ -276,8 +276,11 @@ def main():
     edge = int(0.012 * SR)
     ramp = np.linspace(0, 1, edge, dtype=np.float32)
     for n in range(16):
-        a0 = max(0, int((onset[n] - PRE) * SR))
-        b0 = min(len(x), int((finish[n] + POST) * SR))
+        # Never reach into the neighbouring line: take at most half of the pause on each side.
+        pre = min(PRE, max(0.02, (onset[n] - finish[n - 1]) / 2)) if n else PRE
+        post = min(POST, max(0.03, (onset[n + 1] - finish[n]) / 2)) if n + 1 < 16 else POST
+        a0 = max(0, int((onset[n] - pre) * SR))
+        b0 = min(len(x), int((finish[n] + post) * SR))
         clip_path = os.path.join(a.out, f"line{n + 1:02d}.wav")
         write_wav(clip_path, x[a0:b0])
         if abs(tempo - 1.0) > 1e-6:
@@ -286,7 +289,7 @@ def main():
             clip = read_wav(fast)
         else:
             clip = x[a0:b0].copy()
-        start = int(round((v[n] - PRE / tempo) * SR))
+        start = int(round((v[n] - pre / tempo) * SR))
         start = max(0, start)
         stop = min(total, start + len(clip))
         clip = clip[: stop - start]
