@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { MERCHANT, generateWeek, inr, inrShort } from "../data";
+import { DAY, MERCHANT, MIN, generateWeek, inr, inrShort } from "../data";
 import { LANES, RECOVERY_LANES, results, runWeek, wilson } from "../engine";
 import type { Config, Item } from "../engine";
 import { CircleAlert, CircleCheck, Hourglass } from "lucide-react";
@@ -219,6 +219,27 @@ export function Results({
     [all],
   );
 
+  // The live screen stops counting at Sunday 11:59 PM. This screen follows each of the week's
+  // failed payments to its end, so a few messages and payments land after that moment.
+  const afterSunday = useMemo(() => {
+    const first = weekOne[0];
+    if (!first) return { messages: 0, paid: 0 };
+    const end = generateWeek(first.p.week).start + 7 * DAY - MIN;
+    let messages = 0,
+      paid = 0;
+    for (const it of weekOne) {
+      if (it.sendAt !== null && it.sendAt > end) messages++;
+      if (it.offerState === "sent" && it.offerAt !== null && it.offerAt > end) messages++;
+      if (
+        (it.outcome === "recovered" || it.outcome === "recovered_offer") &&
+        it.paidAt !== null &&
+        it.paidAt > end
+      )
+        paid++;
+    }
+    return { messages, paid };
+  }, [weekOne]);
+
   const weeksToProof = useMemo(() => {
     if (cfg.holdoutPct === 0) return null;
     for (let n = 1; n <= all.length; n++) if (results(all.slice(0, n)).proven) return n;
@@ -428,6 +449,14 @@ export function Results({
             {MERCHANT.couponCap}% coupon on every recovered order would have cost{" "}
             {inr(Math.round((r.treatedPaidValue + r.discountCost) * (MERCHANT.couponCap / 100)))}.
           </p>
+          {weeks === 1 && afterSunday.messages + afterSunday.paid > 0 ? (
+            <p className="sa-note" style={{ marginTop: 6 }}>
+              This screen follows each of the week's failed payments to its end.{" "}
+              {afterSunday.messages} {afterSunday.messages === 1 ? "message" : "messages"} and{" "}
+              {afterSunday.paid} {afterSunday.paid === 1 ? "payment" : "payments"} came after Sunday
+              midnight, so these totals are above the live screen's last count.
+            </p>
+          ) : null}
         </section>
 
         <div>
