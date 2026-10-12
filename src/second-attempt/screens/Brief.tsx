@@ -100,15 +100,20 @@ export function Brief({
   };
   const missMax = Math.max(1, ...Object.values(missCount));
 
+  // One reason code, several right answers: where every payment_timed_out ended up.
   const timedOut = useMemo(() => {
-    let customer = 0,
-      bank = 0;
+    let retry = 0,
+      wait = 0,
+      hold = 0,
+      other = 0;
     for (const { p, t } of all) {
       if (p.error.reason !== "payment_timed_out") continue;
-      if (t.variant === "slip") customer++;
-      else if (t.variant === "downtime" || t.variant === "technical") bank++;
+      if (t.lane === "retry_now") retry++;
+      else if (t.lane === "wait_retry") wait++;
+      else if (t.lane === "do_not_ask") hold++;
+      else other++;
     }
-    return { customer, bank, all: customer + bank };
+    return { retry, wait, hold, other, all: retry + wait + hold + other };
   }, [all]);
 
   // ----- the sort: every square travels from the one block into its lane -----
@@ -373,8 +378,11 @@ export function Brief({
                 {cvc.code} of {cvc.total} could be sorted by the reason code alone. {cvc.context}{" "}
                 needed context.
               </b>{" "}
-              For example, <code>payment_timed_out</code> appeared {timedOut.all} times:{" "}
-              {timedOut.customer} slow customers and {timedOut.bank} bank faults, under one code.
+              For example, <code>payment_timed_out</code> appeared {timedOut.all} times under one
+              code. {timedOut.retry} could be retried at once, {timedOut.wait} had to wait for a
+              bank to come back, and {timedOut.hold} should not be asked again because the money had
+              moved or the order was already paid
+              {timedOut.other > 0 ? `. ${timedOut.other} went to other lanes` : ""}.
             </p>
           </div>
         </section>
