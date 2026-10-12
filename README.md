@@ -37,6 +37,7 @@ The merchant reviews every lane and message, sets a holdout and a discount cap, 
 - **Outcomes are simulated** from assumed rates. Every assumption is listed in the prototype under "Assumptions and what is simulated".
 - **The sorting is deterministic code,** not a live model. In production a language model would read the long tail of bank error text and customer replies. Here those cases are explicit checks, so the prototype behaves the same way every time.
 - **Nothing is sent.** There is no WhatsApp, SMS or payment link behind it, and no login.
+- **The result is measured against no message.** The last screen compares customers who got a message with a holdout who got none, so most of the figure is the effect of sending any message. Under the same assumed rates, one link for everyone recovers ₹2.37 lakh over 12 weeks and the four lanes, with no offers, ₹2.52 lakh. One link would also go out 52 times while the customer's bank was still down, and ask 30 customers whose money was pending to pay again. The check is in [`checks/one-link.ts`](src/second-attempt/checks/one-link.ts).
 
 ## Code map
 
@@ -46,6 +47,7 @@ The merchant reviews every lane and message, sets a holdout and a discount cap, 
 | `src/second-attempt/engine.ts`            | Lane sorting, guardrails, the simulated week, results with intervals, and message templates |
 | `src/second-attempt/screens/`             | The four screens                                                                            |
 | `src/second-attempt/ui.tsx`, `styles.css` | Shared components and plain CSS scoped under `.sa`                                          |
+| `src/second-attempt/checks/`              | A comparison with one link for everyone, and tests that pin the quoted numbers to the code  |
 | `src/routes/index.tsx`                    | Mounts the prototype at `/`                                                                 |
 | `public/fonts/`                           | Self-hosted Anek Latin and Mukta                                                            |
 
@@ -56,7 +58,7 @@ npm install
 npm run dev
 ```
 
-`npm run build` makes the production build and `npm test` runs the routing test.
+`npm run build` makes the production build. `npm test` runs the routing test and the checks that pin the quoted numbers.
 
 ## How it was built
 
