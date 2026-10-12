@@ -1,0 +1,36 @@
+// The model's answers. Produced by Claude (Claude Fable 5.1) in the build session, reading
+// each reply once against model-prompt.md, at 11:06 PM IST on 12 October 2026, before the
+// answer key had been sent. D = money has left the account or the order is already paid.
+
+export const MODEL_ANSWERS: { answer: "D" | "N"; why: string }[] = [
+  { answer: "D", why: "Says the money has already been cut and asks why pay again." },
+  { answer: "N", why: "Cannot pay now, will try in the evening." },
+  { answer: "D", why: "The reply the message asked for if money left the account." },
+  { answer: "D", why: "Screen showed failed but the balance fell by 1,248." },
+  { answer: "N", why: "Says it has not been paid. The bank SMS was only the OTP." },
+  { answer: "N", why: "Says money was not cut and asks whether to use the same link." },
+  { answer: "D", why: "Paid through another link for the same order and has a receipt." },
+  { answer: "N", why: "Cancelled before entering the PIN, so nothing left the account." },
+  { answer: "D", why: "The same order was paid from the mother's account." },
+  { answer: "D", why: "States that ₹1,248 was debited." },
+  { answer: "N", why: "Cancelled before any money was cut." },
+  { answer: "N", why: "The link will not open. Asks how to pay." },
+  { answer: "D", why: "Already paid for this order with another card." },
+  { answer: "N", why: "Asks what replying PAID does and says the payment is not made yet." },
+  { answer: "D", why: "Balance went from 5,000 to 3,752, a fall of 1,248, while the app spins." },
+  { answer: "N", why: "Meant to pay, but a call came and it was left." },
+  { answer: "N", why: "Answers its own question with no. Insufficient funds, will add money." },
+  { answer: "D", why: "Refuses a refund and wants the order for the 1,248 already taken." },
+  { answer: "N", why: "Will ask her mother to pay later. No money in the account." },
+  { answer: "D", why: "Says in words that 1,248 rupees were cut and no order was made." },
+  { answer: "D", why: "Paid the same order with the wife's card." },
+  { answer: "N", why: "Typed paid by mistake and corrects it: still has to pay." },
+  { answer: "N", why: "Balance is unchanged, so no refund is due." },
+  { answer: "D", why: "Got the bank's debit SMS, though the app says processing." },
+  { answer: "N", why: "Says the payment never happened because checkout hung." },
+  { answer: "D", why: "Paid the 1,248 for this order by bank transfer to the store." },
+  { answer: "N", why: "OTP expired and no money went. Asks for a new OTP." },
+  { answer: "D", why: "The amount went out the first time. Only the confirmation was missing." },
+  { answer: "N", why: "Amount was not cut. The network dropped, and the order is not wanted now." },
+  { answer: "D", why: "Payment was made from another number. Asks to match it to the order." },
+];
