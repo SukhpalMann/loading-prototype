@@ -1145,6 +1145,18 @@ export function messageFor(
   return "";
 }
 
+// On WhatsApp a retry message carries a one-tap reply for a customer whose money has left the
+// account. A tap arrives as structured data, so a rule can read it. The same thing typed in the
+// customer's own words is what a model would read. SMS has no buttons: there the customer types.
+export function quickReplyFor(
+  it: Pick<Item, "p" | "t">,
+  step: 1 | 2 = 1,
+  forceHinglish?: boolean,
+): string | null {
+  if (step !== 1 || it.t.lane !== "retry_now" || !it.p.customer.whatsapp) return null;
+  return (forceHinglish ?? it.p.customer.hinglish) ? "Paisa kat gaya hai" : "Money was deducted";
+}
+
 // What a customer is told about money that was debited for a payment that did not complete.
 // For UPI it can cite RBI's rule (auto-reversal within T + 5 days for a debit with no confirmation
 // at the merchant). For other methods the circular gives no such line, so the message promises

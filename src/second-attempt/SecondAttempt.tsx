@@ -281,8 +281,17 @@ function About({ onClose, onReplyTest }: { onClose: () => void; onReplyTest: () 
           auto-reversal within five days when a UPI payment to a merchant is debited but not
           confirmed. The status message cites that rule for UPI payments only. Whether a pending
           debit can be seen when a payment is sorted is not verified: I found no such field in
-          Razorpay's public payment record. In the simulation every customer whose debit could not
-          be seen replies to the message. Real customers may not.
+          Razorpay's public payment record.
+        </p>
+        <p>
+          <b>Will customers reply?</b> Not all of them. In the simulation every customer whose debit
+          could not be seen replies to the message, which is the most generous assumption here. I
+          found no figure for replies to a message like this one. Two things lower the product's
+          dependence on a reply. On WhatsApp the retry message carries a one-tap reply, so answering
+          takes one tap, and a tap is read by a rule. And in the product, a late payment reported by
+          the gateway would switch the link off with no reply at all. This prototype does not
+          simulate that second path. The model is for customers who type in their own words, as the
+          customer on the live screen does.
         </p>
         <p>
           <b>Not built.</b> No message is sent, no payment link is real, and there is no login.

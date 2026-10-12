@@ -12,7 +12,7 @@ This log says which AI tools I used, how, where I overruled them, and what I dec
 
 **In brief**
 
-- One assistant, Claude, did the research, the code and the drafts. I made the product decisions, and overruled or challenged its output five times (section 3).
+- One assistant, Claude, did the research, the code and the drafts. I made the product decisions, and overruled or challenged its output six times (section 3).
 - A second model reviewed the finished pack and scored it 59 out of 100. Its findings changed the claim, the comparison and the headline number.
 - The brief asks why this needs AI and not a fixed rule. I tested that question blind, on 30 customer replies I wrote by hand. A keyword rule missed 5 of the 15 replies that said money had left the account. A model missed none (section 2).
 - The prototype's numbers quoted in the one-pager, the video and this log are pinned to the code by tests.
@@ -83,7 +83,7 @@ The files and the full protocol are in [`src/second-attempt/checks/replies/`](sr
 
 ## 3. AI outputs I rejected, corrected or improved
 
-**Five I overruled or challenged myself.**
+**Six I overruled or challenged myself.**
 
 1. **A plan that depended on merchant interviews.** Before any building, Claude asked me to hold fifteen-minute merchant conversations, so that the note would carry a real number and I could test the direction against a merchant's own words. I could not reach a merchant that day. I told Claude to go ahead without them. The cost is stated, not hidden: the one-pager says the evidence is desk research with no merchant interviews, the persona is labelled as a persona, and real failure data from one merchant is the first test listed.
 2. **Research split across four sub-agents.** Claude's first move on research was to hand it to four parallel sub-agents, each waiting for my approval. I declined. The pages were public, so I saw no reason to approve each step. I told it to read them directly, and it did the research in one thread.
@@ -93,6 +93,7 @@ The files and the full protocol are in [`src/second-attempt/checks/replies/`](sr
    - It found a competitor that Claude's research had missed: Cashfree Resolve, which places an AI voice call within 60 seconds of a failed payment and opens with the likely failure reason. Claude checked this on Cashfree's own pages before I used it. The idea is now pitched as the message-based answer to that product, with two additions: deciding when not to contact a customer, and a holdout that measures the result.
    - It showed that "every failed payment gets the same link today" was an inference from marketing posts, not an established fact. The claim is gone. One link for all is now called what it is: the simplest recovery rule, used as the comparison.
    - It pressed on the headline number, which measured messaging against silence, not four lanes against one link. The comparison with one link is now on the results screen. The result the pack leads with is the smaller one: ₹14,633 more than one link over 12 simulated weeks, most of it from a single lane.
+6. **A recovery path that leaned on customers replying.** The demo's central moment is a customer who replies that her money was already cut. At 3 AM before submitting I asked Claude: "do people really reply back to bank messages?!" Its answer had three parts. The message comes from the store on WhatsApp, not from a bank. It found no figure for how often customers reply to a message like this one. And the simulation had assumed that every one of the 13 affected customers replied, which the one-pager did not say. Three things changed. The retry message now carries a one-tap reply, which a rule can read, so a model is needed only for customers who type. The one-pager and the results screen state the assumption. And the gateway's late-authorisation signal is named as the trigger that needs no reply at all.
 
 **Corrections from Claude's own verification, which I kept.** Each one changed the submission.
 
@@ -141,7 +142,7 @@ The files and the full protocol are in [`src/second-attempt/checks/replies/`](sr
 - **There is no model in the prototype.** The sorting is rules. The Hinglish reply on the live screen and the answer to it are written in advance. The role proposed for a language model is narrow: reading unfamiliar bank error text and customers' free-text replies, and handing structured facts to the rules. Reading replies has been tested once, on 30 replies (section 2). Reading bank error text has not been tested.
 - **No merchant interviews.** The current workaround is described from Razorpay's own posts and vendor playbooks. The only merchant voice in the pack is one public forum post.
 - **Nothing is sent.** There is no WhatsApp, SMS or payment link behind the prototype.
-- **Every customer replies.** In the simulation, each customer whose debit could not be seen replies to the message, and none pays twice. Real customers may pay again without replying.
+- **Replies are assumed.** In the simulation, each customer whose debit could not be seen replies to the message, and none pays twice. Real customers may stay silent, complain to their bank or in their UPI app, or pay again. No figure was found for replies to a message like this one. The design lowers its dependence on a reply in two ways: a one-tap reply under the message, and the gateway's late-authorisation signal, which the prototype does not simulate.
 - **Open product questions.** The prototype does not answer what happens in an outage that lasts for hours, whose WhatsApp number sends the message, or how the feature would be priced.
 
 **Risks.**
@@ -199,6 +200,8 @@ The files and the full protocol are in [`src/second-attempt/checks/replies/`](sr
 - NPCI, definitions of business and technical declines: https://www.npci.org.in/statistics/bd-td-and-uptime
 - Shopify Community (5 Apr 2021), a merchant in India on payments that were deducted with no order created: https://community.shopify.com/t/payment-deducted-order-not-captured-happening-for-a-lot-of-orders-please-help/41957
 - Inc42 on Razorpay, ChatGPT Ads and Agent Studio's beta (5 Oct 2026): https://inc42.com/buzz/razorpay-partners-with-openai-to-help-indian-brands-advertise-on-chatgpt/
+- Razorpay, UPI Dispute Redressal Mechanism (21 Jan 2025), which points a debited customer to the UPI app and the bank: https://razorpay.com/blog/upi-dispute-redressal-mechanism/
+- Clickatell help, interactive buttons in WhatsApp message templates, source of the one-tap reply: https://help.clickatell.com/whatsapp/channel-capabilities/whatsapp-message-templates/use-interactive-buttons-in-message-templates
 - Meta, WhatsApp template category guidelines: https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines/
 - QuickReply.ai, WhatsApp pricing in India, quoting Meta's rate card: https://www.quickreply.ai/whatsapp-automation/whatsapp-business-api-pricing
 - Caller Digital, AI calling cost and recovery reporting (vendor): https://caller.digital/blog/abandoned-cart-recovery-ai-calling-d2c-india-shopify-woocommerce

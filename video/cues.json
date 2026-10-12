@@ -67,9 +67,9 @@
     "from": 41.6,
     "to": 47.2,
     "scene": "A week, live",
-    "screen": "The week plays. Zoya's reply, then \"Link switched off\"",
-    "say": "A customer replies that her money was already cut, so the link is switched off.",
-    "caption": "A customer replies that her money was already cut, so the link is switched off."
+    "screen": "The week plays. Zoya's typed reply under the one-tap button, then \"Link switched off\"",
+    "say": "A customer replies on WhatsApp that her money was cut, so the link is switched off.",
+    "caption": "A customer replies on WhatsApp that her money was cut, so the link is switched off."
   },
   {
     "n": 9,
@@ -77,8 +77,8 @@
     "to": 51.2,
     "scene": "A week, live",
     "screen": "The reply test opens: 17 of 30 against 30 of 30",
-    "say": "Reading such replies is the one job I'd give a model.",
-    "caption": "Reading such replies is the one job I'd give a model."
+    "say": "Reading typed replies is the one job I'd give a model.",
+    "caption": "Reading typed replies is the one job I'd give a model."
   },
   {
     "n": 10,

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { BellOff, Hourglass, RotateCw, ShieldCheck, Wallet } from "lucide-react";
+import { BellOff, Hourglass, Reply, RotateCw, ShieldCheck, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { fmtClock, fmtDate, fmtDay, inr } from "./data";
 import type { FailedPayment, Week } from "./data";
-import { LANES, messageFor, triage } from "./engine";
+import { LANES, messageFor, quickReplyFor, triage } from "./engine";
 import type { Config, LaneId } from "./engine";
 
 const LANE_ICONS: Record<LaneId, LucideIcon> = {
@@ -66,20 +66,35 @@ export function Assumed({ children, title }: { children: ReactNode; title?: stri
   );
 }
 
+// A message as the customer sees it. `reply` is the one-tap reply WhatsApp shows under it.
 export function Bubble({
   text,
   incoming,
   time,
+  reply,
 }: {
   text: string;
   incoming?: boolean;
   time?: string;
+  reply?: string | null;
 }) {
   return (
-    <div className={`sa-bubble${incoming ? " sa-bubble--in" : ""}`}>
-      {text}
-      {time ? <small>{time}</small> : null}
-    </div>
+    <>
+      <div className={`sa-bubble${incoming ? " sa-bubble--in" : ""}`}>
+        {text}
+        {time ? <small>{time}</small> : null}
+      </div>
+      {reply ? (
+        <div
+          className="sa-qr"
+          title="A one-tap reply on WhatsApp. A customer can also type the same thing in their own words."
+        >
+          <Reply size={15} aria-hidden="true" />
+          <span>{reply}</span>
+          <em>one tap</em>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -247,7 +262,10 @@ export function Inspector({
         </h3>
         {sends ? (
           <div className="sa-phone">
-            <Bubble text={messageFor({ p, t }, cfg, 1, hinglish)} />
+            <Bubble
+              text={messageFor({ p, t }, cfg, 1, hinglish)}
+              reply={quickReplyFor({ p, t }, 1, hinglish)}
+            />
             {t.lane === "needs_reason" && p.amount >= cfg.offerMinCart && cfg.discountCapPct > 0 ? (
               <>
                 <p className="sa-phone__gap">

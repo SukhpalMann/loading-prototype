@@ -50,6 +50,7 @@ Two panels open from the foot of every screen. **Assumptions and what is simulat
 - **Outcomes are simulated** from assumed rates. Every assumption is listed in the prototype under "Assumptions and what is simulated".
 - **The sorting is rules, not a model.** No model is called anywhere. The role proposed for a language model is narrow: reading unfamiliar bank error text and customers' free-text replies, and handing structured facts to the rules. Verified payment status and rules would decide every action. The reply exchange on the live screen is scripted.
 - **One part of the model's role has been tested.** I wrote 30 customer replies by hand, 15 of which say that money left the account. A keyword rule, fixed before the replies existed, missed 5 of those 15 and raised 8 false alarms. A model missed none. The set is small and was built to include hard cases, and the model's answers came from Claude in the build session, not from a call made by the prototype. The protocol and files are in [`checks/replies/`](src/second-attempt/checks/replies/).
+- **Replies are assumed.** In the simulation every customer whose debit could not be seen replies to the message. No figure was found for replies to a message like this one. The retry message carries a one-tap reply, and in the product the gateway's late-authorisation signal would switch the link off with no reply at all.
 - **Nothing is sent.** There is no WhatsApp, SMS or payment link behind it, and no login.
 
 ## What the result shows, and what it does not

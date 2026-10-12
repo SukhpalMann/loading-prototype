@@ -22,7 +22,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { DAY, MERCHANT, MIN, fmtClock, fmtDate, fmtDay, inr } from "../data";
 import type { FailedPayment, Week } from "../data";
-import { REPLY_SCRIPT, messageFor } from "../engine";
+import { REPLY_SCRIPT, messageFor, quickReplyFor } from "../engine";
 import type { Config, Item, RunEvent } from "../engine";
 import { Assumed, Bubble, LaneTag } from "../ui";
 import { REPLIES } from "../checks/replies/replies";
@@ -687,7 +687,11 @@ function Thread({
         </p>
       ) : (
         <div className="sa-phone">
-          <Bubble text={messageFor(it, cfg, 1)} time={fmtClock(it.sendAt!)} />
+          <Bubble
+            text={messageFor(it, cfg, 1)}
+            time={fmtClock(it.sendAt!)}
+            reply={quickReplyFor(it)}
+          />
           {replyAt !== null && replyAt <= clock ? (
             <Bubble incoming text={REPLY_SCRIPT.customer(p.amount)} time={fmtClock(replyAt)} />
           ) : null}
@@ -708,7 +712,9 @@ function Thread({
             English: "{REPLY_SCRIPT.agentEnglish(p.amount, p.method === "upi")}"
           </p>
           <p className="sa-note" style={{ marginTop: 8 }}>
-            This exchange is scripted. Reading such replies is the one job proposed for a model.{" "}
+            This exchange is scripted.{" "}
+            {quickReplyFor(it) ? "The customer typed where a tap would have done. " : ""}
+            Reading typed replies is the one job proposed for a model.{" "}
             <button type="button" className="sa-linkbtn" onClick={onReplyTest}>
               See a keyword rule and a model read {REPLIES.length} of them
             </button>

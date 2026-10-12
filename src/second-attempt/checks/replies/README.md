@@ -70,3 +70,4 @@ These are the costly mistakes: the link would have stayed on.
 - The set is small and written by one person in one evening. It shows whether a gap exists, not how large it is.
 - The model's answers were produced by Claude in the build session, by hand from the prompt, not by an API call from the prototype. The prototype still calls no model.
 - The replies are invented by a real person, not collected from real customers.
+- After the test, the retry message gained a one-tap reply on WhatsApp. A tap needs no reader at all. This test is about replies that are typed, and how many customers reply at all is not known.

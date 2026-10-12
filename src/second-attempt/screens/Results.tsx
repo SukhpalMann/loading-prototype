@@ -606,7 +606,7 @@ export function Results({
                 <p>
                   <b>Customers with money in limbo.</b> {r.pendingProtected - r.movedByReply} got no
                   link because the amount was pending. {r.movedByReply} got a link, reported a
-                  debit, and had it switched off.
+                  debit, and had it switched off. The simulation assumes each of them replied.
                 </p>
               </li>
               <li>

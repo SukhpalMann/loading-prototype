@@ -6,6 +6,7 @@ import {
   TEST_HOLDOUT_TARGET,
   messageFor,
   project,
+  quickReplyFor,
   runWeek,
   testEndWeek,
   triage,
@@ -138,7 +139,10 @@ export function Plan({
                   <div>
                     {ex ? (
                       <div className="sa-phone" style={{ marginTop: 0 }}>
-                        <Bubble text={messageFor(ex, cfg, 1, hinglish)} />
+                        <Bubble
+                          text={messageFor(ex, cfg, 1, hinglish)}
+                          reply={quickReplyFor(ex, 1, hinglish)}
+                        />
                         {lane === "needs_reason" &&
                         cfg.discountCapPct > 0 &&
                         ex.p.amount >= cfg.offerMinCart ? (
