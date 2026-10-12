@@ -40,18 +40,17 @@ export default function SecondAttempt() {
   };
 
   return (
-    <div className="sa">
+    <div className="sa" data-step={step}>
       <header className="sa-top">
         <div className="sa-top__in">
           <div className="sa-mark" aria-label="Second Attempt">
-            <span style={{ background: "#3fbf85" }} />
-            <span style={{ background: "#f0b445" }} />
-            <span style={{ background: "#8aa5e6" }} />
-            <span style={{ background: "#e481b4", marginRight: 10 }} />
+            <span className="sa-mark__lanes" aria-hidden="true">
+              <i className="lane--retry_now" />
+              <i className="lane--wait_retry" />
+              <i className="lane--do_not_ask" />
+              <i className="lane--needs_reason" />
+            </span>
             Second Attempt
-          </div>
-          <div className="sa-store">
-            <b>{MERCHANT.name}</b>, a fictional {MERCHANT.what}, {MERCHANT.monthly}
           </div>
           <nav className="sa-steps" aria-label="Steps">
             {STEPS.map((s, i) => (
@@ -67,6 +66,12 @@ export default function SecondAttempt() {
               </button>
             ))}
           </nav>
+          <div className="sa-store">
+            <b>{MERCHANT.name}</b>
+            <span>
+              A fictional {MERCHANT.what}, {MERCHANT.monthly}
+            </span>
+          </div>
         </div>
       </header>
 

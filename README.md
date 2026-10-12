@@ -26,10 +26,10 @@ The merchant reviews every lane and message, sets a holdout and a discount cap, 
 
 ## The four screens
 
-1. **Last week.** 68 failed payments sorted into lanes, what one link for everyone gets wrong, and the signals the sorting reads. Click any square to read that payment's record.
+1. **Last week.** 68 failed payments, one square each. The page opens on today's rule, one link for all, with the 30 wrong links in red. The squares then sort into the lanes. Click any square to read that payment's record.
 2. **The plan.** Each lane's rule and message, in English or Hinglish, with the merchant's guardrails: holdout, discount cap, minimum cart for offers and quiet hours.
 3. **This week, live.** A simulated week with a bank downtime, a customer who replies that her money was already cut, an offer waiting for approval, a stop button and an audit trail.
-4. **What it achieved.** Customers who got a message against a holdout who did not, with ranges, after 1, 4 and 12 weeks. The product does not claim credit until the holdout supports it.
+4. **What it achieved.** Customers who got a message against a holdout who did not, with ranges, after 1, 4 and 12 weeks. A chart adds up what was caused week by week and shows the week the range clears zero. The product does not claim credit until the holdout supports it.
 
 ## What is real and what is not
 

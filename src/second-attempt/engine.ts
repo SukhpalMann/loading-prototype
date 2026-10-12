@@ -432,7 +432,7 @@ export function runWeek(
         kind: "left",
         lane: t.lane,
         id: p.id,
-        text: `No message to ${first(p)}. ${t.why}`,
+        text: `${first(p)} gets no message. ${t.why}`,
       });
       continue;
     }
@@ -445,7 +445,7 @@ export function runWeek(
           kind: "suppressed",
           lane: t.lane,
           id: p.id,
-          text: `No link to ${first(p)}. ${t.why}`,
+          text: `${first(p)} gets no link. ${t.why}`,
         });
         continue;
       }
@@ -707,6 +707,23 @@ export function summariseLanes(week: Week): LaneSummary[] {
 
 // What a single rule (payment failed, send one link 30 minutes later) gets wrong on this batch.
 // These are counts of facts about the batch, not predicted outcomes.
+export type MissKind = "downtime" | "pending" | "paid" | "risk" | "fail_again";
+
+// The ways one link, 30 minutes after the failure, would be wrong for this payment.
+export function oneLinkMissKinds(p: FailedPayment, week: Week): MissKind[] {
+  const t = triage(p, week);
+  if (t.variant === "opted_out" || t.variant === "no_consent") return []; // assume the rule also respects consent
+  const kinds: MissKind[] = [];
+  const linkAt = p.failedAt + 30 * MIN;
+  if (t.downtime && linkAt < t.downtime.end && p.paidSince === "no" && !p.riskFlag)
+    kinds.push("downtime");
+  if (p.pendingAtBank || p.pendingSurfacesLate) kinds.push("pending");
+  if (p.paidSince !== "no") kinds.push("paid");
+  if (p.riskFlag) kinds.push("risk");
+  if (t.lane === "needs_reason") kinds.push("fail_again");
+  return kinds;
+}
+
 export function oneLinkMisses(week: Week) {
   let intoDowntime = 0,
     pendingAsked = 0,
@@ -714,15 +731,13 @@ export function oneLinkMisses(week: Week) {
     riskChased = 0,
     wouldFailAgain = 0;
   for (const p of week.payments) {
-    const t = triage(p, week);
-    if (t.variant === "opted_out" || t.variant === "no_consent") continue; // assume the rule also respects consent
-    const linkAt = p.failedAt + 30 * MIN;
-    if (t.downtime && linkAt < t.downtime.end && p.paidSince === "no" && !p.riskFlag)
-      intoDowntime++;
-    if (p.pendingAtBank || p.pendingSurfacesLate) pendingAsked++;
-    if (p.paidSince !== "no") alreadyPaid++;
-    if (p.riskFlag) riskChased++;
-    if (t.lane === "needs_reason") wouldFailAgain++;
+    for (const k of oneLinkMissKinds(p, week)) {
+      if (k === "downtime") intoDowntime++;
+      else if (k === "pending") pendingAsked++;
+      else if (k === "paid") alreadyPaid++;
+      else if (k === "risk") riskChased++;
+      else wouldFailAgain++;
+    }
   }
   return {
     intoDowntime,
@@ -1021,7 +1036,7 @@ export function messageFor(
   }
   if (t.lane === "retry_now" && t.variant === "technical") {
     return hi
-      ? `Hi ${n}, ${shop} par aapka ${amt} ka payment payment system ki technical dikkat se fail hua. Aapki galti nahi thi, ab sab theek hai. Cart saved hai: ${link}\nAgar paisa kat gaya ho to PAID reply karein, hum pehle check karenge.`
+      ? `Hi ${n}, ${shop} par aapka ${amt} ka payment ek technical dikkat ki wajah se fail hua. Aapki galti nahi thi, ab sab theek hai. Cart saved hai: ${link}\nAgar paisa kat gaya ho to PAID reply karein, hum pehle check karenge.`
       : `Hi ${n}, your payment of ${amt} to ${shop} failed because of a technical fault on the payment side, not yours. It is working now. Your cart is saved: ${link}\nIf money left your account, reply PAID and we will check before you pay again.`;
   }
   if (t.lane === "retry_now") {

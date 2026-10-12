@@ -3,7 +3,8 @@ import { MERCHANT, generateWeek, inr } from "../data";
 import type { FailedPayment, Week } from "../data";
 import { LANES, messageFor, project, runWeek, triage, weeksToProof } from "../engine";
 import type { Config, LaneId, Triage } from "../engine";
-import { Assumed, Bubble, LanguageToggle, Switch } from "../ui";
+import { Lock } from "lucide-react";
+import { Assumed, Bubble, LaneIcon, LanguageToggle, Switch } from "../ui";
 
 type ActiveLane = "retry_now" | "wait_retry" | "do_not_ask" | "needs_reason";
 const ACTIVE: ActiveLane[] = ["retry_now", "wait_retry", "do_not_ask", "needs_reason"];
@@ -74,18 +75,11 @@ export function Plan({
 
       <div className="sa-plan">
         <div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 12,
-              gap: 12,
-              flexWrap: "wrap",
-            }}
-          >
+          <div className="sa-plan__bar">
             <h2 className="sa-h2">The four lanes</h2>
-            <LanguageToggle hinglish={hinglish} onChange={setHinglish} />
+            <span className="sa-plan__lang">
+              Messages in <LanguageToggle hinglish={hinglish} onChange={setHinglish} />
+            </span>
           </div>
 
           {ACTIVE.map((lane) => {
@@ -95,7 +89,8 @@ export function Plan({
             return (
               <section key={lane} className={`sa-rule lane--${lane}${on ? "" : " sa-rule--off"}`}>
                 <div className="sa-rule__top">
-                  <div>
+                  <LaneIcon lane={lane} size={20} />
+                  <div className="sa-rule__title">
                     <h3 className="sa-lane__name">{LANES[lane].name}</h3>
                     <p className="sa-lane__rule">{LANES[lane].rule}</p>
                   </div>
@@ -106,25 +101,32 @@ export function Plan({
                   />
                 </div>
                 <div className="sa-rule__grid">
-                  <div className="sa-rule__facts">
-                    <p>
-                      <b>What it does.</b> {LANES[lane].action}
-                    </p>
-                    <p>
-                      <b>When.</b> {WHEN[lane]}
-                    </p>
-                    <p>
-                      <b>Discount.</b>{" "}
-                      {lane === "needs_reason"
-                        ? cfg.discountCapPct > 0
-                          ? `None in the first message. Up to ${cfg.discountCapPct}% in the second, on carts above ${inr(cfg.offerMinCart)}, and only with your approval.`
-                          : "None. Offers are switched off."
-                        : "None."}
-                    </p>
-                    <p>
-                      <b>Last week.</b> {n.n} payments, {inr(n.value)}.
-                    </p>
-                  </div>
+                  <dl className="sa-facts">
+                    <div>
+                      <dt>What it does</dt>
+                      <dd>{LANES[lane].action}</dd>
+                    </div>
+                    <div>
+                      <dt>When</dt>
+                      <dd>{WHEN[lane]}</dd>
+                    </div>
+                    <div>
+                      <dt>Discount</dt>
+                      <dd>
+                        {lane === "needs_reason"
+                          ? cfg.discountCapPct > 0
+                            ? `None in the first message. Up to ${cfg.discountCapPct}% in the second, on carts above ${inr(cfg.offerMinCart)}, and only with your approval.`
+                            : "None. Offers are switched off."
+                          : "None."}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Last week</dt>
+                      <dd>
+                        {n.n} payments, {inr(n.value)}.
+                      </dd>
+                    </div>
+                  </dl>
                   <div>
                     {ex ? (
                       <div className="sa-phone" style={{ marginTop: 0 }}>
@@ -133,7 +135,7 @@ export function Plan({
                         cfg.discountCapPct > 0 &&
                         ex.p.amount >= cfg.offerMinCart ? (
                           <>
-                            <p className="sa-note" style={{ margin: "10px 2px 6px" }}>
+                            <p className="sa-phone__gap">
                               A day later, if still unpaid and you have approved offers:
                             </p>
                             <Bubble text={messageFor(ex, cfg, 2, hinglish)} />
@@ -149,12 +151,20 @@ export function Plan({
             );
           })}
 
-          <section className="sa-rule lane--left_alone">
-            <h3 className="sa-lane__name">{LANES.left_alone.name}</h3>
-            <p className="sa-lane__rule">
-              {LANES.left_alone.rule} {LANES.left_alone.action} This lane cannot be switched off.
-              Last week: {proj.perLane.left_alone.n} payments.
-            </p>
+          <section className="sa-rule sa-rule--locked lane--left_alone">
+            <div className="sa-rule__top">
+              <LaneIcon lane="left_alone" size={20} />
+              <div className="sa-rule__title">
+                <h3 className="sa-lane__name">{LANES.left_alone.name}</h3>
+                <p className="sa-lane__rule">
+                  {LANES.left_alone.rule} {LANES.left_alone.action} Last week:{" "}
+                  {proj.perLane.left_alone.n} payments.
+                </p>
+              </div>
+              <span className="sa-locked">
+                <Lock size={14} aria-hidden="true" /> Cannot be switched off
+              </span>
+            </div>
           </section>
         </div>
 

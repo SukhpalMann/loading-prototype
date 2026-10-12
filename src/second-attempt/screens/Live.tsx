@@ -1,5 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
+import {
+  BadgePercent,
+  BellOff,
+  CalendarClock,
+  CircleAlert,
+  CircleCheck,
+  CircleSlash,
+  Hand,
+  Hourglass,
+  Landmark,
+  MessageCircle,
+  Pause,
+  Play,
+  Scale,
+  Send,
+  ShieldCheck,
+  SkipForward,
+  Undo2,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { DAY, MERCHANT, MIN, fmtClock, fmtDate, fmtDay, inr } from "../data";
 import type { FailedPayment, Week } from "../data";
 import { REPLY_SCRIPT, messageFor } from "../engine";
@@ -12,6 +32,33 @@ const SIM_PER_TICK = 24 * MIN; // a week plays in about 34 seconds
 function stamp(t: number) {
   return `${fmtDay(t)} ${fmtClock(t)}`;
 }
+
+const EVENT_ICONS: Partial<Record<RunEvent["kind"], LucideIcon>> = {
+  sent: Send,
+  held: Hourglass,
+  status: ShieldCheck,
+  suppressed: CircleSlash,
+  left: BellOff,
+  holdout: Scale,
+  paid: CircleCheck,
+  offer_wait: BadgePercent,
+  offer_sent: BadgePercent,
+  reply: MessageCircle,
+  moved: ShieldCheck,
+  captured: CircleCheck,
+  refunded: Undo2,
+  downtime_start: Landmark,
+  downtime_end: Landmark,
+  paused: Hand,
+};
+
+const MOMENT_ICONS: Record<string, LucideIcon> = {
+  reply: MessageCircle,
+  down: Hourglass,
+  up: Send,
+  offer: BadgePercent,
+  end: CalendarClock,
+};
 
 function allowedBy(e: RunEvent, cfg: Config): string {
   switch (e.kind) {
@@ -249,105 +296,119 @@ export function Live({
         lanes act on their own. Offers stop and ask.
       </p>
 
-      <div className="sa-livebar">
-        <div className="sa-clock">
-          {fmtDay(shownClock)} {fmtDate(shownClock)}, {fmtClock(shownClock)}
-        </div>
-        <button
-          type="button"
-          className="sa-btn sa-btn--quiet"
-          onClick={() => {
-            if (clock >= end) setClock(start);
-            setPlaying((v) => !v);
-          }}
-        >
-          {playing ? "Hold time" : clock >= end ? "Play again" : "Play the week"}
-        </button>
-        <button
-          type="button"
-          className="sa-btn sa-btn--quiet"
-          onClick={() => {
-            setPlaying(false);
-            setClock(end);
-          }}
-        >
-          Skip to Sunday night
-        </button>
-        {clock >= end ? (
-          <button type="button" className="sa-btn" onClick={onNext}>
-            See what it achieved
-          </button>
-        ) : null}
-        <span style={{ marginLeft: "auto" }} />
-        {pausedAt === null ? (
-          <button type="button" className="sa-btn sa-btn--stop" onClick={() => setPausedAt(clock)}>
-            Stop all sending
-          </button>
-        ) : (
-          <button type="button" className="sa-btn" onClick={() => setPausedAt(null)}>
-            Resume sending
-          </button>
-        )}
-      </div>
-
-      {pausedAt !== null ? (
-        <div className="sa-banner" role="status">
-          <span>
-            Sending stopped at {stamp(pausedAt)}. {tally.blocked}{" "}
-            {tally.blocked === 1 ? "message is" : "messages are"} being held back. Customers who
-            already got a link can still pay.
-          </span>
-        </div>
-      ) : null}
-
-      <div className="sa-week">
-        <div
-          className="sa-week__track"
-          onClick={(e) => {
-            const r = e.currentTarget.getBoundingClientRect();
-            setPlaying(false);
-            setClock(start + ((e.clientX - r.left) / r.width) * (end - start));
-          }}
-          role="slider"
-          aria-label="Time in the week"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(((clock - start) / (end - start)) * 100)}
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowRight") setClock((c) => Math.min(end, c + 60 * MIN));
-            if (e.key === "ArrowLeft") setClock((c) => Math.max(start, c - 60 * MIN));
-          }}
-        >
-          <div className="sa-week__days">
-            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i}>
-                {fmtDay(start + i * DAY)} {fmtDate(start + i * DAY)}
-              </div>
-            ))}
+      <div className="sa-console">
+        <div className="sa-livebar">
+          <div className="sa-clock">
+            {fmtDay(shownClock)} {fmtDate(shownClock)}, {fmtClock(shownClock)}
           </div>
-          {week.downtimes.map((d) => (
-            <div
-              key={d.id}
-              className="sa-week__down"
-              style={{ left: pct(d.begin), width: `calc(${pct(d.end)} - ${pct(d.begin)})` }}
-              title={`Downtime on ${d.label}, ${stamp(d.begin)} to ${fmtClock(d.end)}`}
-            />
-          ))}
-          {items.map((it) => (
-            <div
-              key={it.p.id}
-              className={`sa-week__dot lane--${it.t.lane}`}
-              style={{ left: pct(it.p.failedAt) }}
-            />
-          ))}
-          <div className="sa-week__done" style={{ width: pct(clock) }} />
-          <div className="sa-week__head" style={{ left: pct(clock) }} />
+          <button
+            type="button"
+            className="sa-btn sa-btn--quiet"
+            onClick={() => {
+              if (clock >= end) setClock(start);
+              setPlaying((v) => !v);
+            }}
+          >
+            {playing ? (
+              <Pause size={16} aria-hidden="true" />
+            ) : (
+              <Play size={16} aria-hidden="true" />
+            )}
+            {playing ? "Hold time" : clock >= end ? "Play again" : "Play the week"}
+          </button>
+          <button
+            type="button"
+            className="sa-btn sa-btn--quiet"
+            onClick={() => {
+              setPlaying(false);
+              setClock(end);
+            }}
+          >
+            <SkipForward size={16} aria-hidden="true" />
+            Skip to Sunday night
+          </button>
+          {clock >= end ? (
+            <button type="button" className="sa-btn" onClick={onNext}>
+              See what it achieved
+            </button>
+          ) : null}
+          <span style={{ marginLeft: "auto" }} />
+          {pausedAt === null ? (
+            <button
+              type="button"
+              className="sa-btn sa-btn--stop"
+              onClick={() => setPausedAt(clock)}
+            >
+              <Hand size={16} aria-hidden="true" />
+              Stop all sending
+            </button>
+          ) : (
+            <button type="button" className="sa-btn" onClick={() => setPausedAt(null)}>
+              <Play size={16} aria-hidden="true" />
+              Resume sending
+            </button>
+          )}
         </div>
-        <p className="sa-note" style={{ marginTop: 6 }}>
-          Orange bars are bank downtimes. Each tick is a failed payment, in its lane's colour. Click
-          anywhere to move time.
-        </p>
+
+        {pausedAt !== null ? (
+          <div className="sa-banner" role="status">
+            <span>
+              Sending stopped at {stamp(pausedAt)}. {tally.blocked}{" "}
+              {tally.blocked === 1 ? "message is" : "messages are"} being held back. Customers who
+              already got a link can still pay.
+            </span>
+          </div>
+        ) : null}
+
+        <div className="sa-week">
+          <div
+            className="sa-week__track"
+            onClick={(e) => {
+              const r = e.currentTarget.getBoundingClientRect();
+              setPlaying(false);
+              setClock(start + ((e.clientX - r.left) / r.width) * (end - start));
+            }}
+            role="slider"
+            aria-label="Time in the week"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(((clock - start) / (end - start)) * 100)}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight") setClock((c) => Math.min(end, c + 60 * MIN));
+              if (e.key === "ArrowLeft") setClock((c) => Math.max(start, c - 60 * MIN));
+            }}
+          >
+            <div className="sa-week__days">
+              {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i}>
+                  {fmtDay(start + i * DAY)} {fmtDate(start + i * DAY)}
+                </div>
+              ))}
+            </div>
+            {week.downtimes.map((d) => (
+              <div
+                key={d.id}
+                className="sa-week__down"
+                style={{ left: pct(d.begin), width: `calc(${pct(d.end)} - ${pct(d.begin)})` }}
+                title={`Downtime on ${d.label}, ${stamp(d.begin)} to ${fmtClock(d.end)}`}
+              />
+            ))}
+            {items.map((it) => (
+              <div
+                key={it.p.id}
+                className={`sa-week__dot lane--${it.t.lane}`}
+                style={{ left: pct(it.p.failedAt) }}
+              />
+            ))}
+            <div className="sa-week__done" style={{ width: pct(clock) }} />
+            <div className="sa-week__head" style={{ left: pct(clock) }} />
+          </div>
+          <p className="sa-note" style={{ marginTop: 6 }}>
+            Amber bars are bank downtimes. Each tick is a failed payment, in its lane's colour.
+            Click anywhere to move time.
+          </p>
+        </div>
       </div>
 
       <div className="sa-moments">
@@ -355,49 +416,68 @@ export function Live({
           <button
             key={m.key}
             type="button"
-            className="sa-moment"
+            className={`sa-moment sa-moment--${m.key}`}
+            aria-pressed={clock === m.at}
             onClick={() => {
               setPlaying(false);
               setClock(m.at);
               if (m.focus) setFocusId(m.focus);
             }}
           >
-            <b>{m.label}</b> {m.text}
+            <MomentIcon k={m.key} />
+            <span>
+              <b>{m.label}</b> {m.text}
+            </span>
           </button>
         ))}
       </div>
 
-      <div className="sa-live">
-        <div className="sa-tally">
-          <div>
-            <span className="sa-num">{tally.failed}</span>
-            <span className="sa-tally__label">payments failed so far</span>
-          </div>
-          <div>
-            <span className="sa-num">{tally.sent}</span>
-            <span className="sa-tally__label">messages sent</span>
-          </div>
-          <div>
-            <span className="sa-num">{tally.held}</span>
-            <span className="sa-tally__label">held until a bank is back</span>
-          </div>
-          <div>
-            <span className="sa-num">{tally.notSent}</span>
-            <span className="sa-tally__label">
-              not messaged on purpose: already paid, held out, no consent, or risk
-            </span>
-          </div>
-          <div>
-            <span className="sa-num">
-              <Assumed>{inr(tally.recovered)}</Assumed>
-            </span>
-            <span className="sa-tally__label">
-              paid after a message, from {tally.recoveredN}{" "}
-              {tally.recoveredN === 1 ? "customer" : "customers"}
-            </span>
-          </div>
+      <div className="sa-tally">
+        <div>
+          <i className="sa-tally__icon" aria-hidden="true">
+            <CircleAlert size={18} />
+          </i>
+          <span className="sa-num">{tally.failed}</span>
+          <span className="sa-tally__label">payments failed so far</span>
         </div>
+        <div>
+          <i className="sa-tally__icon" aria-hidden="true">
+            <Send size={18} />
+          </i>
+          <span className="sa-num">{tally.sent}</span>
+          <span className="sa-tally__label">messages sent</span>
+        </div>
+        <div className="lane--wait_retry">
+          <i className="sa-tally__icon" aria-hidden="true">
+            <Hourglass size={18} />
+          </i>
+          <span className="sa-num">{tally.held}</span>
+          <span className="sa-tally__label">held until a bank is back</span>
+        </div>
+        <div className="lane--left_alone">
+          <i className="sa-tally__icon" aria-hidden="true">
+            <BellOff size={18} />
+          </i>
+          <span className="sa-num">{tally.notSent}</span>
+          <span className="sa-tally__label">
+            not messaged on purpose: already paid, held out, no consent, or risk
+          </span>
+        </div>
+        <div className="lane--retry_now">
+          <i className="sa-tally__icon" aria-hidden="true">
+            <CircleCheck size={18} />
+          </i>
+          <span className="sa-num">
+            <Assumed>{inr(tally.recovered)}</Assumed>
+          </span>
+          <span className="sa-tally__label">
+            paid after a message, from {tally.recoveredN}{" "}
+            {tally.recoveredN === 1 ? "customer" : "customers"}
+          </span>
+        </div>
+      </div>
 
+      <div className="sa-live">
         <div className="sa-feed">
           <div className="sa-feed__head">
             <span className="sa-seg" role="group" aria-label="View">
@@ -431,6 +511,7 @@ export function Live({
                     if (e.id && byId.has(e.id)) setFocusId(e.id);
                   }}
                 >
+                  <EventIcon kind={e.kind} />
                   <time>{stamp(e.t)}</time>
                   <span>{e.kind === "paid" ? <b>{e.text}</b> : e.text}</span>
                 </button>
@@ -511,6 +592,24 @@ export function Live({
         </div>
       </div>
     </div>
+  );
+}
+
+function EventIcon({ kind }: { kind: RunEvent["kind"] }) {
+  const Icon = EVENT_ICONS[kind];
+  return (
+    <i className="sa-ev__icon" aria-hidden="true">
+      {Icon ? <Icon size={15} /> : null}
+    </i>
+  );
+}
+
+function MomentIcon({ k }: { k: string }) {
+  const Icon = MOMENT_ICONS[k];
+  return (
+    <i className="sa-moment__icon" aria-hidden="true">
+      {Icon ? <Icon size={16} /> : null}
+    </i>
   );
 }
 

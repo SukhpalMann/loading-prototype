@@ -1,9 +1,29 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { BellOff, Hourglass, RotateCw, ShieldCheck, Wallet } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { fmtClock, fmtDate, fmtDay, inr } from "./data";
 import type { FailedPayment, Week } from "./data";
 import { LANES, messageFor, triage } from "./engine";
 import type { Config, LaneId } from "./engine";
+
+const LANE_ICONS: Record<LaneId, LucideIcon> = {
+  retry_now: RotateCw,
+  wait_retry: Hourglass,
+  do_not_ask: ShieldCheck,
+  needs_reason: Wallet,
+  left_alone: BellOff,
+};
+
+// A lane's icon on a chip in the lane's colour. Decorative: the lane name always sits beside it.
+export function LaneIcon({ lane, size = 18 }: { lane: LaneId; size?: number }) {
+  const Icon = LANE_ICONS[lane];
+  return (
+    <span className={`sa-chip lane--${lane}`} aria-hidden="true">
+      <Icon size={size} strokeWidth={2.2} />
+    </span>
+  );
+}
 
 export function LaneTag({ lane }: { lane: LaneId }) {
   return <span className={`sa-tag lane--${lane}`}>{LANES[lane].name}</span>;
@@ -120,11 +140,14 @@ export function Inspector({
         role="dialog"
         aria-label="Failed payment record"
       >
-        <button type="button" className="sa-drawer__close" onClick={onClose}>
-          Close
-        </button>
-        <LaneTag lane={t.lane} />
-        <h2 className="sa-h2" style={{ marginTop: 10 }}>
+        <div className="sa-drawer__head">
+          <LaneIcon lane={t.lane} />
+          <LaneTag lane={t.lane} />
+          <button type="button" className="sa-drawer__close" onClick={onClose}>
+            Close
+          </button>
+        </div>
+        <h2 className="sa-h2" style={{ marginTop: 16 }}>
           {p.customer.label}, {inr(p.amount)}
         </h2>
         <p className="sa-note">
@@ -141,7 +164,7 @@ export function Inspector({
           </div>
         </div>
 
-        <h3 className="sa-h3" style={{ marginTop: 22 }}>
+        <h3 className="sa-h3" style={{ marginTop: 24 }}>
           What the payment record says
         </h3>
         <div className="sa-kv">
@@ -212,7 +235,7 @@ export function Inspector({
         <h3
           className="sa-h3"
           style={{
-            marginTop: 22,
+            marginTop: 24,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -227,7 +250,7 @@ export function Inspector({
             <Bubble text={messageFor({ p, t }, cfg, 1, hinglish)} />
             {t.lane === "needs_reason" && p.amount >= cfg.offerMinCart && cfg.discountCapPct > 0 ? (
               <>
-                <p className="sa-note" style={{ margin: "10px 2px 6px" }}>
+                <p className="sa-phone__gap">
                   A day later, only if still unpaid and only once you approve offers:
                 </p>
                 <Bubble text={messageFor({ p, t }, cfg, 2, hinglish)} />
