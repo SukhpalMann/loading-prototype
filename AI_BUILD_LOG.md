@@ -3,7 +3,10 @@
 Razorpay x ISB AI PM Build Challenge, Track 2 (Recover and Grow with AI).
 Author: Sukhpal Singh Mann. Built on 12 October 2026.
 
-Second Attempt is a concept prototype. It sorts failed payments into four lanes by cause, so each customer gets the right second attempt instead of the same payment link. The code is in this repository under [`src/second-attempt/`](src/second-attempt/).
+Second Attempt is a concept prototype. It sorts failed payments into four lanes by cause, so each customer gets the right second attempt instead of the same payment link.
+
+- Live prototype: https://second-attempt-recovery.lovable.app/
+- Code: [`src/second-attempt/`](src/second-attempt/) in this repository
 
 This log says which AI tools I used, how, where I overruled them, and what I decided myself.
 
@@ -33,7 +36,7 @@ No API keys were needed. The prototype makes no model calls at run time. See sec
 4. **Decisions by multiple choice.** Claude put each product decision to me as a short question with its recommendation marked. I answered six: the direction, the name, what runs without approval, when a discount is allowed, how recovery is proven, and hosting.
 5. **Logic before screens.** Claude wrote the data generator and the sorting and simulation logic in TypeScript first, and tested them from the command line. Screens came after the numbers were stable.
 6. **Screens with a browser in the loop.** Claude built the four screens in React, drove them in a headless browser, took screenshots, and fixed what it saw.
-7. **Hosting.** Lovable created the project scaffold (TanStack Start, React, TypeScript, Tailwind) and hosts the app. Claude moved the prototype into that repository through Lovable's GitHub sync, then checked the result against the version it had tested. Section 5 lists those checks.
+7. **Hosting.** Lovable created the project scaffold (TanStack Start, React, TypeScript, Tailwind) and hosts the app. Claude moved the prototype into that repository through Lovable's GitHub sync, then checked the result against the version it had tested. I published it from Lovable. Section 5 lists the checks.
 
 **Prompts worth recording.**
 
@@ -66,7 +69,7 @@ No API keys were needed. The prototype makes no model calls at run time. See sec
 | Research               | Searched, read, verified quotes, flagged weak evidence                 | Told it to research directly instead of pausing for approvals. Supplied the correct brief when it flagged that I had attached the wrong file.                           |
 | Product direction      | Proposed five directions, scored them, argued against its own top pick | Chose cause-aware failed-payment recovery over the COD and reorder options.                                                                                             |
 | Product rules          | Proposed options and trade-offs                                        | Chose the name. Chose that three no-discount lanes run on their own and offers wait for approval. Chose discount as a last resort only. Chose a 10% holdout by default. |
-| Prototype              | Wrote all the code, the synthetic data and the tests                   | Chose Lovable for hosting. Created the Lovable project and connected it to GitHub.                                                                                      |
+| Prototype              | Wrote all the code, the synthetic data and the tests                   | Chose Lovable for hosting. Created the Lovable project and connected it to GitHub. Published the app, made the repository public and reviewed the live version.         |
 | One-pager, script, log | Drafted from my decisions                                              | Own the final wording. Nothing goes into the form without my review.                                                                                                    |
 | Video                  | Drafted the script and the click path                                  | Record and narrate it myself.                                                                                                                                           |
 
@@ -94,6 +97,7 @@ No API keys were needed. The prototype makes no model calls at run time. See sec
 - The data generator is seeded and avoids engine-dependent randomness, so every browser shows the same numbers.
 - The click path was run end to end in a headless browser with zero console errors, including stop and resume, offer approval and all three result periods.
 - After the move into the Lovable repository: the repository's typecheck, lint, routing test and production build pass. A script confirmed that every generated week, simulated run and message is identical to the tested version. Screenshots of each screen were compared pixel by pixel with the tested version, and the layout was checked at phone width.
+- The published link was checked two ways. An anonymous fetch returned the page with no sign-in. The full click path then ran on the live site in a browser: every file loaded, the console stayed clean and the 12-week figures matched the tested run.
 - The numbers in the one-pager and the video script were read from the same run the prototype shows.
 - The one-pager's fit on a single A4 page was measured, not judged by eye.
 

@@ -4,6 +4,7 @@ Cause-aware failed-payment recovery for D2C merchants: four lanes instead of one
 
 A concept prototype by Sukhpal Singh Mann for the Razorpay x ISB AI PM Build Challenge, Track 2 (Recover and Grow with AI). It is not a Razorpay product.
 
+- **Live prototype:** https://second-attempt-recovery.lovable.app/
 - **AI build log:** [AI_BUILD_LOG.md](AI_BUILD_LOG.md)
 - **Prototype code:** [`src/second-attempt/`](src/second-attempt/)
 
