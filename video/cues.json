@@ -5,80 +5,80 @@
     "to": 5.5,
     "scene": "The problem",
     "screen": "The headline, then the 68 squares",
-    "say": "Last week, sixty-eight customers pressed Pay at this store, and the payment failed.",
-    "caption": "Last week, 68 customers pressed Pay at this store, and the payment failed."
+    "say": "Last week, sixty-eight customers tried to pay at this store, and the payment failed.",
+    "caption": "Last week, 68 customers tried to pay at this store, and the payment failed."
   },
   {
     "n": 2,
     "from": 5.7,
-    "to": 8.7,
+    "to": 8.6,
     "scene": "The problem",
     "screen": "\"One payment link for all 68\"",
-    "say": "The simplest recovery sends everyone the same link.",
-    "caption": "The simplest recovery sends everyone the same link."
+    "say": "The simplest thing is to send everyone the same payment link.",
+    "caption": "The simplest thing is to send everyone the same payment link."
   },
   {
     "n": 3,
     "from": 8.8,
-    "to": 15.5,
+    "to": 15.8,
     "scene": "The problem",
     "screen": "Zoom on the 30 red squares",
-    "say": "For thirty, it is the wrong step: the bank is still down, or the money has already gone.",
-    "caption": "For 30, it is the wrong step: the bank is still down, or the money has already gone."
+    "say": "But for thirty of them, that's wrong. The bank is still down, or the money is already deducted.",
+    "caption": "But for 30 of them, that's wrong. The bank is still down, or the money is already deducted."
   },
   {
     "n": 4,
     "from": 16.0,
-    "to": 23.7,
+    "to": 23.8,
     "scene": "The idea",
     "screen": "One payment's record opens: why this lane, error fields, downtime, status",
-    "say": "Second Attempt reads why each payment failed: the error code, Razorpay's downtime feed, and what happened next.",
-    "caption": "Second Attempt reads why each payment failed: the error code, Razorpay's downtime feed, and what happened next."
+    "say": "So Second Attempt first figures out why the payment failed, using the error code and Razorpay's own downtime feed.",
+    "caption": "So Second Attempt first figures out why the payment failed, using the error code and Razorpay's own downtime feed."
   },
   {
     "n": 5,
     "from": 24.0,
-    "to": 30.5,
+    "to": 30.6,
     "scene": "The idea",
     "screen": "The squares fly into lanes, then a pan across the lanes",
-    "say": "Then it sorts: retry now, wait for the bank, do not ask again, or another way to pay.",
-    "caption": "Then it sorts: retry now, wait for the bank, do not ask again, or another way to pay."
+    "say": "Then it sorts them into four lanes: retry now, wait for the bank, don't ask again, or try another way to pay.",
+    "caption": "Then it sorts them into four lanes: retry now, wait for the bank, don't ask again, or try another way to pay."
   },
   {
     "n": 6,
     "from": 30.8,
-    "to": 37.5,
+    "to": 37.6,
     "scene": "The merchant decides",
     "screen": "The plan: a rule and its message, the holdout and cap, Approve",
-    "say": "The merchant reviews every rule and message, sets a holdout and a discount cap, and approves once.",
-    "caption": "The merchant reviews every rule and message, sets a holdout and a discount cap, and approves once."
+    "say": "The merchant sees all of this and approves it once.",
+    "caption": "The merchant sees all of this and approves it once."
   },
   {
     "n": 7,
     "from": 37.8,
-    "to": 40.0,
+    "to": 41.4,
     "scene": "The merchant decides",
     "screen": "The red Stop all sending button",
-    "say": "One button stops everything.",
-    "caption": "One button stops everything."
+    "say": "And one button stops everything.",
+    "caption": "And one button stops everything."
   },
   {
     "n": 8,
     "from": 41.6,
-    "to": 47.2,
+    "to": 47.1,
     "scene": "A week, live",
     "screen": "The week plays. Zoya's typed reply under the one-tap button, then \"Link switched off\"",
-    "say": "A customer replies on WhatsApp that her money was already cut, so the link is switched off.",
-    "caption": "A customer replies on WhatsApp that her money was already cut, so the link is switched off."
+    "say": "Now here's Zoya. She replies on WhatsApp that her money was already cut, so her link is switched off right away.",
+    "caption": "Now here's Zoya. She replies on WhatsApp that her money was already cut, so her link is switched off right away."
   },
   {
     "n": 9,
     "from": 47.3,
-    "to": 51.2,
+    "to": 51.1,
     "scene": "A week, live",
     "screen": "The reply test opens: 17 of 30 against 30 of 30",
-    "say": "Reading such replies is the one job I'd give a model.",
-    "caption": "Reading such replies is the one job I'd give a model."
+    "say": "Reading replies like this is the only thing I'd use AI for.",
+    "caption": "Reading replies like this is the only thing I'd use AI for."
   },
   {
     "n": 10,
@@ -86,61 +86,61 @@
     "to": 59.3,
     "scene": "A week, live",
     "screen": "The rows: Missed in red, Caught beside it",
-    "say": "On thirty replies I wrote, a keyword rule missed five of fifteen debit reports. The model missed none.",
-    "caption": "On 30 replies I wrote, a keyword rule missed 5 of 15 debit reports. The model missed none."
+    "say": "And I tested this. I wrote thirty replies, and a keyword rule missed five of the fifteen where money had already gone. The model got all fifteen.",
+    "caption": "And I tested this. I wrote 30 replies, and a keyword rule missed 5 of the 15 where money had already gone. The model got all 15."
   },
   {
     "n": 11,
     "from": 59.5,
-    "to": 62.9,
+    "to": 63.2,
     "scene": "A week, live",
     "screen": "Thursday 9:24 PM: 4 held until a bank is back",
-    "say": "And messages wait while a bank is down.",
-    "caption": "And messages wait while a bank is down."
+    "say": "If the bank is down, the message simply waits.",
+    "caption": "If the bank is down, the message simply waits."
   },
   {
     "n": 12,
     "from": 63.4,
-    "to": 66.3,
+    "to": 64.8,
     "scene": "What it achieved",
     "screen": "Week 1 says too early. Click 12 weeks",
-    "say": "Results are read once, against a holdout.",
-    "caption": "Results are read once, against a holdout."
+    "say": "So what's the impact?",
+    "caption": "So what's the impact?"
   },
   {
     "n": 13,
-    "from": 66.5,
-    "to": 71.3,
+    "from": 65.0,
+    "to": 70.8,
     "scene": "What it achieved",
     "screen": "\"After 12 weeks, ₹1.21 lakh came back\", then the two bars",
-    "say": "Simulated over twelve weeks, messages bring back about one point two lakh rupees.",
-    "caption": "Simulated over 12 weeks, messages bring back about ₹1.2 lakh."
+    "say": "In a twelve-week simulation, it brings back around one point two lakh rupees extra.",
+    "caption": "In a 12-week simulation, it brings back around ₹1.2 lakh extra."
   },
   {
     "n": 14,
-    "from": 71.5,
-    "to": 78.8,
+    "from": 71.0,
+    "to": 78.9,
     "scene": "What it achieved",
     "screen": "The card \"Against one link for everyone\": 82 and 13",
-    "say": "Against one link for all, the lanes add about fifteen thousand, and cut badly timed links from eighty-two to thirteen.",
-    "caption": "Against one link for all, the lanes add about ₹15,000, and cut badly timed links from 82 to 13."
+    "say": "Against one link for everyone, it adds only about fifteen thousand. But badly timed links come down from eighty-two to thirteen.",
+    "caption": "Against one link for everyone, it adds only about ₹15,000. But badly timed links come down from 82 to 13."
   },
   {
     "n": 15,
     "from": 79.1,
-    "to": 82.7,
+    "to": 82.2,
     "scene": "How it learns",
     "screen": "The card \"What changes next week\"",
-    "say": "Each week it proposes changes. None applies without her.",
-    "caption": "Each week it proposes changes. None applies without her."
+    "say": "Every week it suggests changes, and the merchant decides.",
+    "caption": "Every week it suggests changes, and the merchant decides."
   },
   {
     "n": 16,
-    "from": 82.9,
-    "to": 86.7,
+    "from": 82.4,
+    "to": 87.4,
     "scene": "How it learns",
     "screen": "End card with the link and your name",
-    "say": "All of this is synthetic. Next: one real merchant's data.",
-    "caption": "All of this is synthetic. Next: one real merchant's data."
+    "say": "Right now, this runs on synthetic data. I'd love to run it on Razorpay's.",
+    "caption": "Right now, this runs on synthetic data. I'd love to run it on Razorpay's."
   }
 ]

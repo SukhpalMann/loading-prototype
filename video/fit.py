@@ -215,6 +215,9 @@ def main():
     ap.add_argument("--manual", help="JSON list of [start, end] in the recording for each line, to override the detection")
     ap.add_argument("--list", action="store_true", help="print every stretch of speech found")
     ap.add_argument("--no-words", action="store_true", help="skip forced alignment and use pauses only")
+    ap.add_argument("--highpass", type=float, default=70.0, help="cut rumble below this frequency, Hz; raise it for a recording with a low hum")
+    ap.add_argument("--rnn", help="for a noisy recording: an RNNoise model file (.rnnn) for ffmpeg's arnndn, applied before anything else")
+    ap.add_argument("--rnn-mix", type=float, default=0.9, help="how much of the denoised signal to use; the rest is the recording as it was")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
 
@@ -224,7 +227,11 @@ def main():
     expected = json.load(open(a.expected)) if os.path.exists(a.expected) else [len(c["say"].split()) / 2.6 for c in cues]
 
     raw = os.path.join(a.out, "voice-raw.wav")
-    run(["ffmpeg", "-y", "-loglevel", "error", "-i", a.audio, "-ac", "1", "-ar", str(SR), "-af", "highpass=f=70", "-c:a", "pcm_s16le", raw])
+    # A gentle rumble filter for a quiet room. For a noisy one, a steeper filter and a speech denoiser.
+    clean_up = f"highpass=f={a.highpass:g}" if a.highpass <= 80 else f"highpass=f={a.highpass:g}:poles=2,highpass=f={a.highpass:g}:poles=2"
+    if a.rnn:
+        clean_up += f",arnndn=m={a.rnn}:mix={a.rnn_mix:g}"
+    run(["ffmpeg", "-y", "-loglevel", "error", "-i", a.audio, "-ac", "1", "-ar", str(SR), "-af", clean_up, "-c:a", "pcm_s16le", raw])
     x = read_wav(raw)
     segs, lv = speech_segments(x)
     print(f"recording {len(x) / SR:.2f}s, background {lv['floor']:.1f} dB, speech above {lv['thr']:.1f} dB, {len(segs)} stretches of speech")

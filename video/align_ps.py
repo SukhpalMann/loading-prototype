@@ -19,6 +19,8 @@ EXTRA = {
     "razorpay's": "R EY Z ER P EY Z",
     "razorpay": "R EY Z ER P EY",
     "whatsapp": "W AH T S AE P",
+    "zoya": "Z OW Y AH",
+    "ai": "EY AY",
     "holdout": "HH OW L D AW T",
     "lakh": "L AA K",
     "downtime": "D AW N T AY M",

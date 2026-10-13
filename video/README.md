@@ -5,7 +5,8 @@ The 90-second video is a screen recording of the prototype. It was not captured 
 - [`rec.mjs`](rec.mjs) is the recorder and the storyboard.
 - [`cues.json`](cues.json) is the narration, line by line, with the caption shown for each line.
 - [`fit.py`](fit.py) and [`align_ps.py`](align_ps.py) fit the picture to a voice recording, and [`finish.sh`](finish.sh) runs the whole last step.
-- [`serve.mjs`](serve.mjs) serves the production build locally. [`ref.marks.json`](ref.marks.json) and [`expected.json`](expected.json) are the storyboard's nominal timing and a reference reading's line lengths, both used by `fit.py`.
+- [`hear.py`](hear.py) transcribes a recording, so the captions can be checked against the words that were spoken.
+- [`serve.mjs`](serve.mjs) serves the production build locally. [`ref.marks.json`](ref.marks.json) and [`expected.json`](expected.json) are the storyboard's nominal timing and the spoken length of each line, both used by `fit.py`.
 
 ## Why a script
 
@@ -37,6 +38,14 @@ The storyboard has sixteen anchors, one for each line of the narration. An ancho
 As little as possible. Each line is placed as its own clip, with room tone from the same recording between the lines. A line read clearly softer or louder than the rest gets one fixed gain. The room's steady background is reduced, using a profile measured from the recording's own room tone. One fixed gain then brings the track to -14 LUFS, and a limiter is added only if a peak would pass -1 dB.
 
 There is no compressor and no automatic gain. An earlier version had both. Measured against the recording, they raised the room noise in the pauses by 6 dB and the top of the voice by 3 to 4 dB. `fit.py` prints what it did: the loudness, the peak, and the background between the lines before and after.
+
+## A noisy recording
+
+The second take of the narration had a fan-like noise about 20 dB louder than the first. For a recording like that, `fit.py --highpass 105 --rnn sh.rnnn` cuts the low rumble with a steeper filter and runs a speech denoiser before anything else. The denoiser is RNNoise, through ffmpeg's `arnndn`, with the model file `sh.rnnn` from https://github.com/GregorR/rnnoise-models. Nine tenths of the denoised signal is mixed with one tenth of the recording, so a little of the room remains under the voice.
+
+## Checking the words
+
+Claude cannot listen to audio. [`hear.py`](hear.py) is the nearest thing: it transcribes audio with an open speech recogniser, Whisper, run on the machine by sherpa-onnx. Each of the sixteen cut lines was transcribed and compared with its caption. That confirmed no word was clipped at a cut, and it showed where my reading had departed from the script, so the captions follow what I said.
 
 ## Running it
 
