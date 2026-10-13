@@ -84,11 +84,11 @@ await page.evaluate(() => {
       #__rec .bar .ch.on { color: #fff; font-weight: 600; }
       #__rec .bar .ch.on b { background: #fff; color: #0a1322; }
       #__rec .bar .wm { color: #8fa0b8; }
-      #__rec .cap { position: fixed; left: 0; top: 0; box-sizing: content-box; transform-origin: 0 0; opacity: 0; max-width: 1010px; text-align: center; text-wrap: balance;
+      #__rec .cap { position: fixed; left: 0; top: 0; z-index: 2; box-sizing: content-box; transform-origin: 0 0; opacity: 0; max-width: 1010px; text-align: center; text-wrap: balance;
         background: rgba(8, 15, 28, 0.92); color: #fff; font-size: 23px; line-height: 1.3; font-weight: 600; padding: 7px 20px 10px; border-radius: 11px; box-shadow: 0 8px 24px rgba(8, 15, 28, 0.3); }
       #__rec .ring { position: fixed; left: 0; top: 0; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 999px; border: 2.5px solid rgba(79, 125, 249, 0.95); background: rgba(79, 125, 249, 0.2); opacity: 0; }
-      #__rec .cur { position: fixed; left: 0; top: 0; width: 24px; height: 24px; transform-origin: 3px 2px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35)); }
-      #__rec .end { position: fixed; inset: 0; background: #0f1b2d; color: #fff; display: grid; place-items: center; text-align: center; opacity: 0; }
+      #__rec .cur { position: fixed; left: 0; top: 0; z-index: 3; width: 24px; height: 24px; transform-origin: 3px 2px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35)); }
+      #__rec .end { position: fixed; inset: 0; z-index: 1; background: #0f1b2d; color: #fff; display: grid; place-items: center; text-align: center; opacity: 0; }
       #__rec .end .dots { display: inline-flex; gap: 7px; margin-right: 16px; vertical-align: 6px; }
       #__rec .end .dots i { width: 22px; height: 22px; border-radius: 5px; display: block; }
       #__rec .end h1 { font-family: "Anek Latin", sans-serif; font-stretch: 84%; font-weight: 700; font-size: 76px; line-height: 1; margin: 0; letter-spacing: -0.01em; }
@@ -260,6 +260,10 @@ function startEncoder() {
     DRAFT ? "veryfast" : "slow",
     "-crf",
     DRAFT ? "24" : "16",
+    "-refs",
+    "4",
+    "-level",
+    "4.1",
     "-color_range",
     "tv",
     "-colorspace",

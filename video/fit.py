@@ -16,10 +16,17 @@ What it does:
      raised slightly only if that is not enough.
   4. Writes the voice track, and a timings file for rec.mjs in which every anchor of the
      storyboard is tied to the line it belongs with.
+
+The voice itself is changed as little as possible. A line that is clearly quieter or louder than
+the rest gets one fixed gain. Some of the room's steady background is removed, using a profile
+measured from the recording's own room tone. One fixed gain brings the whole track to the target
+loudness. A limiter is added only if a peak would otherwise pass the ceiling. There is no
+compressor and no automatic gain, because both raise the background in the pauses.
 """
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import wave
@@ -38,17 +45,23 @@ SR = 48000
 HERE = os.path.dirname(os.path.abspath(__file__))
 PRE = 0.12  # keep up to this much before a line's first sound
 POST = 0.18  # and up to this much after its last
+TARGET_I = -14.0  # loudness of the finished stereo track, LUFS
+TARGET_TP = -1.0  # highest true peak allowed in it, dBTP
+DENOISE = 8  # how much of the room's steady background to remove, dB
+DENOISE_DELAY = 0.025  # ffmpeg's afftdn returns its output this much late
+LEAD = 2.0  # seconds of room tone put before the track, from which the background is measured
+ROOM = 0.5  # the working copy is written at half level, so a lifted line cannot clip in a 16-bit file
 
 
 def run(cmd):
     return subprocess.run(cmd, check=True, capture_output=True, text=True)
 
 
-def read_wav(path):
+def read_wav(path, channels=1):
     with wave.open(path, "rb") as f:
         x = np.frombuffer(f.readframes(f.getnframes()), dtype=np.int16).astype(np.float32) / 32768.0
-        assert f.getframerate() == SR and f.getnchannels() == 1
-    return x
+        assert f.getframerate() == SR and f.getnchannels() == channels
+    return x if channels == 1 else x.reshape(-1, channels).mean(axis=1)
 
 
 def write_wav(path, x):
@@ -57,6 +70,29 @@ def write_wav(path, x):
         f.setsampwidth(2)
         f.setframerate(SR)
         f.writeframes((np.clip(x, -1, 1) * 32767).astype(np.int16).tobytes())
+
+
+def level(x):
+    return 20 * float(np.log10(np.sqrt(np.mean(x.astype(np.float64) ** 2)) + 1e-9)) if len(x) else -180.0
+
+
+def spoken_level(x, thr):
+    """Level of the 20 ms frames in which someone is speaking, so that pauses inside a line do not count."""
+    hop = int(SR * 0.02)
+    n = len(x) // hop
+    if n == 0:
+        return level(x)
+    frames = x[: n * hop].reshape(n, hop)
+    db = 20 * np.log10(np.sqrt((frames.astype(np.float64) ** 2).mean(axis=1)) + 1e-9)
+    loud = frames[db > thr]
+    return level(loud.ravel()) if len(loud) else level(x)
+
+
+def loudness(path):
+    """Integrated loudness (LUFS) and true peak (dBTP) of a file, as ffmpeg's ebur128 measures them."""
+    p = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", path, "-af", "ebur128=peak=true", "-f", "null", "-"], capture_output=True, text=True, check=True)
+    s = p.stderr[p.stderr.rfind("Summary:") :]
+    return float(re.search(r"I:\s+(-?[\d.]+) LUFS", s).group(1)), float(re.search(r"Peak:\s+(-?[\d.]+) dBFS", s).group(1))
 
 
 def speech_segments(x, min_speech=0.10, min_gap=0.16):
@@ -226,6 +262,11 @@ def main():
     print("lines located by", how)
     spoken = [f - o for o, f in zip(onset, finish)]
 
+    # A line read clearly softer or louder than the rest gets one fixed gain, and no more than 3 dB.
+    said = [spoken_level(x[int(o * SR) : int(f * SR)], lv["thr"]) for o, f in zip(onset, finish)]
+    usual = float(np.median(said))
+    lift = [float(np.clip((usual - s_) * 0.75, -3.0, 3.0)) if abs(usual - s_) > 1.5 else 0.0 for s_ in said]
+
     # Schedule the lines. Tighten pauses, then raise the tempo, only as far as the limit needs.
     tempo, gap = 1.0, a.gap
     tail_min = ref["tail"]["fixed"] + 0.45 * ref["tail"]["scaled"]
@@ -244,10 +285,10 @@ def main():
             break
 
     print(f"\npause between lines at least {gap:.2f}s, tempo x{tempo:.2f}")
-    print("line  recorded-at  spoken  starts  nominal  shift  pause-before  text")
+    print("line  recorded-at  spoken  starts  nominal  shift  pause-before  level  gain  text")
     for n in range(16):
         pause = v[n] - (v[n - 1] + dur[n - 1]) if n else 0.0
-        print(f"{n + 1:4d}  {onset[n]:11.2f}  {dur[n]:6.2f}  {v[n]:6.2f}  {nominal[n]:7.2f}  {v[n] - nominal[n]:+5.2f}  {pause:12.2f}  {cues[n]['say'][:44]}")
+        print(f"{n + 1:4d}  {onset[n]:11.2f}  {dur[n]:6.2f}  {v[n]:6.2f}  {nominal[n]:7.2f}  {v[n] - nominal[n]:+5.2f}  {pause:12.2f}  {said[n]:5.1f}  {lift[n]:+4.1f}  {cues[n]['say'][:44]}")
 
     # Anchors follow the lines they belong with.
     at = {x_["name"]: x_ for x_ in ref["anchors"]}
@@ -290,6 +331,7 @@ def main():
             clip = read_wav(fast)
         else:
             clip = x[a0:b0].copy()
+        clip = clip * np.float32(10 ** (lift[n] / 20))
         start = int(round((v[n] - pre / tempo) * SR))
         start = max(0, start)
         stop = min(total, start + len(clip))
@@ -300,12 +342,48 @@ def main():
         track[start:stop] = track[start:stop] * (1 - env) + clip * env
     placed = os.path.join(a.out, "voice-placed.wav")
     write_wav(placed, track)
-    final = os.path.join(a.out, "voice.wav")
+
+    # Remove some of the room's steady background. The filter measures it from room tone put in
+    # front of the track, which is cut off again afterwards together with the filter's own delay.
+    lead = os.path.join(a.out, "voice-lead.wav")
+    write_wav(lead, np.concatenate([room_tone(x, segs, int(LEAD * SR)) * 0.9, track]) * ROOM)
+    clean = os.path.join(a.out, "voice-clean.wav")
     run([
-        "ffmpeg", "-y", "-loglevel", "error", "-i", placed,
-        "-af", "afftdn=nr=8:nf=-40,acompressor=threshold=-21dB:ratio=2.5:attack=8:release=140:makeup=2,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000",
-        "-ac", "1", "-c:a", "pcm_s16le", final,
+        "ffmpeg", "-y", "-loglevel", "error", "-i", lead,
+        "-af", f"asendcmd=c='0.15 afftdn sn start; {LEAD - 0.15:.2f} afftdn sn stop',afftdn=nr={DENOISE}:nf=-50,"
+        f"atrim=start={LEAD + DENOISE_DELAY:.3f},asetpts=PTS-STARTPTS,apad=whole_len={total}",
+        "-ac", "1", "-ar", str(SR), "-c:a", "pcm_s16le", clean,
     ])
+
+    # One gain for the whole track, set by measuring the stereo file the video will carry (the
+    # voice goes to both channels). A limiter is added only if a peak would pass the ceiling.
+    final = os.path.join(a.out, "voice.wav")
+    gain, limit = 0.0, None
+    for _ in range(10):
+        chain = f"pan=stereo|c0=c0|c1=c0,volume={gain:.2f}dB"
+        if limit is not None:
+            chain += f",alimiter=limit={10 ** (limit / 20):.4f}:attack=5:release=60:level=false:latency=true"
+        run(["ffmpeg", "-y", "-loglevel", "error", "-i", clean, "-af", chain, "-ar", str(SR), "-c:a", "pcm_s16le", final])
+        loud, peak = loudness(final)
+        if abs(loud - TARGET_I) <= 0.05 and peak <= TARGET_TP:
+            break
+        if limit is None and peak + (TARGET_I - loud) > TARGET_TP:
+            limit = TARGET_TP - 0.1
+        elif limit is not None and peak > TARGET_TP:
+            limit -= peak - TARGET_TP + 0.05
+        gain += TARGET_I - loud
+
+    # What the finishing did, measured between the lines and inside them.
+    y = read_wav(final, channels=2)
+    between = [(v[n] + dur[n] + 0.14, v[n + 1] - 0.12) for n in range(15) if v[n + 1] - 0.12 - (v[n] + dur[n] + 0.14) >= 0.12]
+    def quiet(z):
+        return float(np.mean([level(z[int(p * SR) : int(q * SR)]) for p, q in between])) if between else float("nan")
+    lines_db = [level(y[int(v[n] * SR) : int((v[n] + dur[n]) * SR)]) for n in range(16)]
+    net = gain + 20 * float(np.log10(ROOM))
+    held = "no limiter was needed" if limit is None else f"limiter at {limit:.1f} dB"
+    print(f"\nvoice track: {loud:.1f} LUFS in stereo, true peak {peak:.1f} dB (each channel is the recording at {net:+.1f} dB; {held})")
+    print(f"background between lines: {quiet(track):.1f} dB as recorded, {quiet(y) - net:.1f} dB at the same level in the finished track")
+    print(f"lines in the finished track: loudest {max(lines_db):.1f} dB, softest {min(lines_db):.1f} dB")
 
     timings = {"anchors": targets, "end": round(end, 3), "ref": {"anchors": ref["anchors"], "tail": ref["tail"]}, "lines": [round(t, 3) for t in v], "line_ends": [round(t + d, 3) for t, d in zip(v, dur)], "tempo": tempo, "gap": gap, "last_word": round(last_word, 3)}
     out = os.path.join(a.out, "timings.json")

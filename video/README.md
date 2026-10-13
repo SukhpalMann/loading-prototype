@@ -32,6 +32,12 @@ The storyboard has sixteen anchors, one for each line of the narration. An ancho
 
 [`finish.sh`](finish.sh) runs steps 2 to 4 and checks that the result is under 90 seconds.
 
+## What happens to the voice
+
+As little as possible. Each line is placed as its own clip, with room tone from the same recording between the lines. A line read clearly softer or louder than the rest gets one fixed gain. The room's steady background is reduced, using a profile measured from the recording's own room tone. One fixed gain then brings the track to -14 LUFS, and a limiter is added only if a peak would pass -1 dB.
+
+There is no compressor and no automatic gain. An earlier version had both. Measured against the recording, they raised the room noise in the pauses by 6 dB and the top of the voice by 3 to 4 dB. `fit.py` prints what it did: the loudness, the peak, and the background between the lines before and after.
+
 ## Running it
 
 ```sh

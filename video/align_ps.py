@@ -18,6 +18,7 @@ from pocketsphinx import Decoder
 EXTRA = {
     "razorpay's": "R EY Z ER P EY Z",
     "razorpay": "R EY Z ER P EY",
+    "whatsapp": "W AH T S AE P",
     "holdout": "HH OW L D AW T",
     "lakh": "L AA K",
     "downtime": "D AW N T AY M",
