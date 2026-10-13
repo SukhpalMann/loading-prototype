@@ -1,16 +1,14 @@
 # How the video was recorded
 
-The 90-second video is a screen recording of the prototype. It was not captured by hand. A script drives the prototype in a headless browser and renders the video one frame at a time, and a second script fits the picture to the narration.
+The 90-second video is a screen recording of the prototype. It was not captured by hand. A script drives the prototype in a headless browser and renders the video one frame at a time.
 
 - [`rec.mjs`](rec.mjs) is the recorder and the storyboard.
-- [`cues.json`](cues.json) is the narration, line by line, with the caption shown for each line.
-- [`fit.py`](fit.py) and [`align_ps.py`](align_ps.py) fit the picture to a voice recording, and [`finish.sh`](finish.sh) runs the whole last step.
-- [`hear.py`](hear.py) transcribes a recording, so the captions can be checked against the words that were spoken.
-- [`serve.mjs`](serve.mjs) serves the production build locally. [`ref.marks.json`](ref.marks.json) and [`expected.json`](expected.json) are the storyboard's nominal timing and the spoken length of each line, both used by `fit.py`.
+- [`cues.json`](cues.json) holds the captions, line by line.
+- [`serve.mjs`](serve.mjs) serves the production build locally.
 
 ## Why a script
 
-A hand recording has to be redone whenever the prototype changes, and its timing is fixed by how fast the clicks happened. This recording can be made again from any build, and its timing follows the voice.
+A hand recording has to be redone whenever the prototype changes, and its timing is fixed by how fast the clicks happened. This recording can be made again from any build.
 
 ## How the picture is made
 
@@ -22,31 +20,6 @@ A hand recording has to be redone whenever the prototype changes, and its timing
 
 The bar along the bottom, the captions, the spotlight and the end card are drawn by the recorder. Everything else on screen is the prototype.
 
-## How the picture is fitted to the voice
-
-The storyboard has sixteen anchors, one for each line of the narration. An anchor is the moment the picture should have reached when that line begins.
-
-1. `NOREC=1 node video/rec.mjs <url> ref.mp4` walks the storyboard without capturing and writes `ref.marks.json`: when each anchor is reached at the nominal pace, and how much of the time before it can be stretched.
-2. `python3 video/fit.py voice.m4a` finds where each line starts and ends in the recording. It does this two ways and compares them: forced alignment of the script's words with PocketSphinx, and a method that uses only pauses and line lengths. It then schedules the lines, tightens pauses if the result would pass 90 seconds, and writes a voice track and `timings.json`.
-3. `node video/rec.mjs <url> out.mp4 timings.json` renders the picture again. The holds between two anchors are stretched or squeezed so each anchor lands with its line.
-4. ffmpeg joins the picture and the voice.
-
-[`finish.sh`](finish.sh) runs steps 2 to 4 and checks that the result is under 90 seconds.
-
-## What happens to the voice
-
-As little as possible. Each line is placed as its own clip, with room tone from the same recording between the lines. A line read clearly softer or louder than the rest gets one fixed gain. The room's steady background is reduced, using a profile measured from the recording's own room tone. One fixed gain then brings the track to -14 LUFS, and a limiter is added only if a peak would pass -1 dB.
-
-There is no compressor and no automatic gain. An earlier version had both. Measured against the recording, they raised the room noise in the pauses by 6 dB and the top of the voice by 3 to 4 dB. `fit.py` prints what it did: the loudness, the peak, and the background between the lines before and after.
-
-## A noisy recording
-
-The second take of the narration had a fan-like noise about 20 dB louder than the first. For a recording like that, `fit.py --highpass 105 --rnn sh.rnnn` cuts the low rumble with a steeper filter and runs a speech denoiser before anything else. The denoiser is RNNoise, through ffmpeg's `arnndn`, with the model file `sh.rnnn` from https://github.com/GregorR/rnnoise-models. Nine tenths of the denoised signal is mixed with one tenth of the recording, so a little of the room remains under the voice.
-
-## Checking the words
-
-Claude cannot listen to audio. [`hear.py`](hear.py) is the nearest thing: it transcribes audio with an open speech recogniser, Whisper, run on the machine by sherpa-onnx. Each of the sixteen cut lines was transcribed and compared with its caption. That confirmed no word was clipped at a cut, and it showed where my reading had departed from the script, so the captions follow what I said.
-
 ## Running it
 
 ```sh
@@ -57,4 +30,4 @@ DRAFT=1 node video/rec.mjs http://127.0.0.1:4214/ draft.mp4   # a fast pass at l
 CAPS=0 node video/rec.mjs http://127.0.0.1:4214/ out.mp4      # without captions
 ```
 
-The recorder needs Playwright, sharp and ffmpeg. The fitting step needs Python with numpy and pocketsphinx. None of these is in this project's `package.json`, because the app does not use them.
+The recorder needs Playwright, sharp and ffmpeg. None of these is in this project's `package.json`, because the app does not use them.

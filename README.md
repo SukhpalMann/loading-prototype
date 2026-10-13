@@ -89,7 +89,7 @@ The comparison is in [`checks/one-link.ts`](src/second-attempt/checks/one-link.t
 | `src/second-attempt/checks/replies/`      | A small blind test of the one job proposed for a model: reading customers' replies       |
 | `src/routes/index.tsx`                    | Mounts the prototype at `/`                                                              |
 | `public/fonts/`                           | Self-hosted Anek Latin and Mukta                                                         |
-| `video/`                                  | The script that recorded the video, and the narration cues                               |
+| `video/`                                  | The script that recorded the video from the prototype, and its captions                  |
 
 ## Run it locally
 

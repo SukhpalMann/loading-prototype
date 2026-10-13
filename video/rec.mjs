@@ -3,15 +3,15 @@
 // Nothing here runs in real time. The page's JavaScript clock is paused and stepped by one
 // frame at a time, every CSS and Web Animations animation is paused and seeked to the same
 // virtual time, and each frame is captured through the DevTools protocol at the camera's crop.
-// So the result is the same on every run, and the timing can be changed to fit a voice-over.
+// So the result is the same on every run, and its timing can be changed.
 //
 //   node rec.mjs <base url> <out.mp4> [timings.json]
 //   DRAFT=1 for a fast low-resolution pass.
 //
 // Without a timings file the storyboard plays at its nominal pace and writes <out>.marks.json,
-// which records when each anchor was reached. A timings file gives each anchor a target time,
-// taken from where the narrator starts each line. The waits between two anchors are then
-// stretched or squeezed so the picture reaches the next anchor on time.
+// which records when each anchor was reached. A timings file gives each anchor a target time.
+// The waits between two anchors are then stretched or squeezed so the picture reaches the next
+// anchor on time.
 //
 // It is not part of the app. It needs Playwright, sharp and ffmpeg, which are not in this
 // project's package.json.
@@ -32,7 +32,7 @@ const OW = DRAFT ? 960 : 1920;
 const OH = DRAFT ? 540 : 1080;
 const ONLY = process.env.ONLY ? process.env.ONLY.split(",") : null; // record only these scenes
 const CAPTURE = !process.env.NOREC; // NOREC=1 walks the storyboard without capturing, to time it
-// Captions: the narration, line by line. CAPS=0 leaves them out.
+// Captions, line by line. CAPS=0 leaves them out.
 const CUES =
   process.env.CAPS === "0"
     ? []
